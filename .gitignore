@@ -1,0 +1,7 @@
+*.o
+*.class
+.DS_Store
+*.pyc
+*.swp
+*.exe
+
