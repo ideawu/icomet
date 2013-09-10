@@ -1,5 +1,5 @@
-#ifndef ICOMET_OBJPOOL_H
-#define ICOMET_OBJPOOL_H
+#ifndef UTIL_OBJPOOL_H
+#define UTIL_OBJPOOL_H
 
 #include <list>
 #include <vector>
