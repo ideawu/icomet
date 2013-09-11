@@ -2,6 +2,7 @@
 #define ICOMET_SERVER_H
 
 #include <vector>
+#include <evhttp.h>
 #include <event2/http.h>
 #include "channel.h"
 #include "util/objpool.h"

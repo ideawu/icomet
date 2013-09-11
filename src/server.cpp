@@ -4,7 +4,7 @@
 #include "server.h"
 #include "util/log.h"
 
-#define MAX_CHANNELS 100
+#define MAX_CHANNELS 100000
 
 Server::Server(){
 	channels.resize(MAX_CHANNELS);
@@ -24,10 +24,10 @@ static void on_disconnect(struct evhttp_connection *evcon, void *arg){
 }
 
 int Server::disconnect(Subscriber *sub){
-	sub->channel->del_subscriber(sub);
+	Channel *channel = sub->channel;
+	channel->del_subscriber(sub);
 	sub_pool.free(sub);
-	log_debug("channel: %d, del sub, sub_count: %d",
-		sub->channel->id, sub->channel->sub_count);
+	log_debug("channel: %d, del sub, sub_count: %d", channel->id, channel->sub_count);
 	return 0;
 }
 
@@ -59,8 +59,7 @@ int Server::sub(struct evhttp_request *req){
 	sub->ptr = this;
 	//sub->last_recv = ...
 	channel->add_subscriber(sub);
-	log_debug("channel: %d, add sub, sub_count: %d",
-		sub->channel->id, sub->channel->sub_count);
+	log_debug("channel: %d, add sub, sub_count: %d", channel->id, channel->sub_count);
 
 	buf = evbuffer_new();
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
@@ -97,26 +96,28 @@ int Server::pub(struct evhttp_request *req){
 		channel = &channels[uid];
 		log_debug("channel: %d, pub, sub_count: %d", channel->id, channel->sub_count);
 	}
-	if(channel && channel->subs){
-		struct evbuffer *buf = evbuffer_new();
-		for(Subscriber *sub = channel->subs; sub; sub=sub->next){
-			printf("pub: %d content: %s\n", uid, content);
-		
-			// push to subscriber
-			evbuffer_add_printf(buf, "{type: \"data\", id: \"%d\", content: \"%s\"}\n", uid, content);
-			evhttp_send_reply_chunk(sub->req, buf);
-		
-			// response to publisher
-			evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-			evbuffer_add_printf(buf, "ok\n");
-			evhttp_send_reply(req, 200, "OK", buf);
-		}
-		evbuffer_free(buf);
-	}else{
+	if(!channel || !channel->subs){
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf, "id: %d not connected\n", uid);
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
+		return 0;
 	}
+
+	struct evbuffer *buf = evbuffer_new();
+	for(Subscriber *sub = channel->subs; sub; sub=sub->next){
+		printf("pub: %d content: %s\n", uid, content);
+		
+		// push to subscriber
+		evbuffer_add_printf(buf, "{type: \"data\", id: \"%d\", content: \"%s\"}\n", uid, content);
+		evhttp_send_reply_chunk(sub->req, buf);
+		
+		// response to publisher
+		evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+		evbuffer_add_printf(buf, "ok\n");
+		evhttp_send_reply(req, 200, "OK", buf);
+	}
+	evbuffer_free(buf);
+
 	return 0;
 }

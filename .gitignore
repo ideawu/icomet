@@ -4,6 +4,7 @@
 *.la
 *.so
 *.class
+tools/benchmark
 .DS_Store
 *.pyc
 *.swp
