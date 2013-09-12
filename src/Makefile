@@ -6,7 +6,7 @@ all:
 		-I${LIBEVENT_PATH}/compat \
 		-I${LIBEVENT_PATH}/include \
 		*.cpp
-	g++ -g -o ../comet \
+	g++ -g -o ../icomet \
 		-I${LIBEVENT_PATH} \
 		-I${LIBEVENT_PATH}/compat \
 		-I${LIBEVENT_PATH}/include \

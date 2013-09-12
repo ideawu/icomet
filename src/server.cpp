@@ -46,7 +46,7 @@ int Server::sub(struct evhttp_request *req){
 		}
 	}
 	
-	if(uid < 0 || uid >= MAX_CHANNELS){
+	if(uid < 0 || uid >= channels.size()){
 		buf = evbuffer_new();
 		evhttp_send_reply_start(req, HTTP_NOTFOUND, "Not Found");
 		evbuffer_free(buf);
@@ -64,8 +64,8 @@ int Server::sub(struct evhttp_request *req){
 	evhttp_connection_set_closecb(req->evcon, on_disconnect, sub);
 
 	buf = evbuffer_new();
-	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	
 	evbuffer_add_printf(buf, "{type: \"welcome\", id: \"%d\", content: \"hello world!\"}\n", uid);
 	evhttp_send_reply_chunk(req, buf);
