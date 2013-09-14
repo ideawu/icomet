@@ -1,10 +1,11 @@
-#include <evhttp.h>
+#include <event2/http.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include "server.h"
 #include "util/log.h"
 
 #define MAX_CHANNELS 1000000
+#define MAX_SUBSCRIBERS_PER_CHANNEL 32
 
 Server::Server(){
 	channels.resize(MAX_CHANNELS);
@@ -20,10 +21,10 @@ Server::~Server(){
 static void on_disconnect(struct evhttp_connection *evcon, void *arg){
 	Subscriber *sub = (Subscriber *)arg;
 	Server *serv = sub->serv;
-	serv->disconnect(sub);
+	serv->sub_end(sub);
 }
 
-int Server::disconnect(Subscriber *sub){
+int Server::sub_end(Subscriber *sub){
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
 	sub_pool.free(sub);
@@ -62,13 +63,16 @@ int Server::sub(struct evhttp_request *req){
 	}
 	
 	if(cid < 0 || cid >= channels.size()){
-		buf = evbuffer_new();
-		evhttp_send_reply_start(req, HTTP_NOTFOUND, "Not Found");
-		evbuffer_free(buf);
+		evhttp_send_reply(req, 404, "Not Found", NULL);
 		return 0;
 	}
 	
 	Channel *channel = &channels[cid];
+	if(channel->sub_count >= MAX_SUBSCRIBERS_PER_CHANNEL){
+		evhttp_send_reply(req, 429, "Too Many Requests", NULL);
+		return 0;
+	}
+	
 	Subscriber *sub = sub_pool.alloc();
 	sub->req = req;
 	sub->serv = this;
@@ -83,7 +87,7 @@ int Server::sub(struct evhttp_request *req){
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
 	buf = evbuffer_new();
-	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"hello world!\"});\n",
+	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"from icomet server!\"});\n",
 		sub->cb.c_str(),
 		channel->id);
 	evhttp_send_reply_chunk(req, buf);

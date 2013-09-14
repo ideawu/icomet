@@ -7,7 +7,7 @@
 #include "channel.h"
 #include "util/objpool.h"
 
-#define DEFAULT_JSONP_CALLBACK "icomet.cb"
+#define DEFAULT_JSONP_CALLBACK "icomet_cb"
 
 class Server{
 private:
@@ -19,7 +19,7 @@ public:
 	
 	int sub(struct evhttp_request *req);
 	int pub(struct evhttp_request *req);
-	int disconnect(Subscriber *sub);
+	int sub_end(Subscriber *sub);
 	int heartbeat();
 };
 

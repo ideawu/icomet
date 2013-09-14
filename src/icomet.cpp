@@ -69,6 +69,7 @@ int main(int argc, char **argv){
 	// /sub?cb=js_callback&id=123&token=&[last_seq=123]
 	evhttp_set_cb(http, "/sub", sub_handler, NULL);
 	// /pub?id=123&content=hi or /pub?uid=xxx&content=hi
+	// content must be json encoded string without leading and trailing quotes
 	evhttp_set_cb(http, "/pub", pub_handler, NULL);
 	// 分配通道, 返回通道的id和token
 	// /sign?uid=xxx
@@ -80,6 +81,8 @@ int main(int argc, char **argv){
 	// /check?id=123,234
 	
 	//evhttp_set_gencb(http, request_handler, NULL);
+	
+	// TODO: listen at two ports, accept sub from public port, others from admin port
 	
 	struct evhttp_bound_socket *handle;
 	handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
