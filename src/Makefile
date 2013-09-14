@@ -1,12 +1,14 @@
-include ../build_config.mk
+include ../config.mk
 
 all:
-	g++ -c -g \
+	${CC} ${CFLAGS} \
+		-c \
 		-I${LIBEVENT_PATH} \
 		-I${LIBEVENT_PATH}/compat \
 		-I${LIBEVENT_PATH}/include \
 		*.cpp
-	g++ -g -o ../icomet \
+	${CC} ${CFLAGS} \
+		-o ../icomet \
 		-I${LIBEVENT_PATH} \
 		-I${LIBEVENT_PATH}/compat \
 		-I${LIBEVENT_PATH}/include \

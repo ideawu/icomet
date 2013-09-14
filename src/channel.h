@@ -1,8 +1,10 @@
 #ifndef ICOMET_CHANNEL_H
 #define ICOMET_CHANNEL_H
 
-#include <vector>
+#include <string>
+#include <evhttp.h>
 
+class Server;
 class Channel;
 
 class Subscriber{
@@ -10,10 +12,10 @@ public:
 	Subscriber *prev;
 	Subscriber *next;
 	
-	struct evhttp_request *req;
-	int last_recv;
+	Server *serv;
 	Channel *channel;
-	void *ptr;
+	struct evhttp_request *req;
+	std::string cb;
 };
 
 class Channel{
@@ -22,11 +24,14 @@ public:
 	int sub_count;
 	Subscriber *subs;
 	// TODO: msg_list
+	int seq_send;
 	
 	Channel();
 	~Channel();
 	void add_subscriber(Subscriber *sub);
 	void del_subscriber(Subscriber *sub);
+	
+	void send(const char *type, const char *content);
 };
 
 #endif

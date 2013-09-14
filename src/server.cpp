@@ -1,16 +1,16 @@
 #include <evhttp.h>
-#include <event2/keyvalq_struct.h>
 #include <event2/buffer.h>
+#include <event2/keyvalq_struct.h>
 #include "server.h"
 #include "util/log.h"
 
-#define MAX_CHANNELS 100000
+#define MAX_CHANNELS 1000000
 
 Server::Server(){
 	channels.resize(MAX_CHANNELS);
 	for(int i=0; i<channels.size(); i++){
-		Channel &ch = channels[i];
-		ch.id = i;
+		Channel *channel = &channels[i];
+		channel->id = i;
 	}
 }
 
@@ -19,7 +19,7 @@ Server::~Server(){
 
 static void on_disconnect(struct evhttp_connection *evcon, void *arg){
 	Subscriber *sub = (Subscriber *)arg;
-	Server *serv = (Server *)sub->ptr;
+	Server *serv = sub->serv;
 	serv->disconnect(sub);
 }
 
@@ -31,6 +31,17 @@ int Server::disconnect(Subscriber *sub){
 	return 0;
 }
 
+int Server::heartbeat(){
+	for(int i=0; i<channels.size(); i++){
+		Channel *channel = &channels[i];
+		if(!channel->subs){
+			continue;
+		}
+		channel->send("noop", "");
+	}
+	return 0;
+}
+
 int Server::sub(struct evhttp_request *req){
 	struct evkeyvalq params;
 	const char *uri = evhttp_request_get_uri(req);
@@ -38,36 +49,43 @@ int Server::sub(struct evhttp_request *req){
 
 	struct evbuffer *buf;
 	
-	int uid = -1;
+	int cid = -1;
+	const char *cb = NULL;
+	//const char *token = NULL;
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
 		if(strcmp(kv->key, "id") == 0){
-			uid = atoi(kv->value);
+			cid = atoi(kv->value);
+		}else if(strcmp(kv->key, "cb") == 0){
+			cb = kv->value;
 		}
 	}
 	
-	if(uid < 0 || uid >= channels.size()){
+	if(cid < 0 || cid >= channels.size()){
 		buf = evbuffer_new();
 		evhttp_send_reply_start(req, HTTP_NOTFOUND, "Not Found");
 		evbuffer_free(buf);
 		return 0;
 	}
 	
-	Channel *channel = &channels[uid];
+	Channel *channel = &channels[cid];
 	Subscriber *sub = sub_pool.alloc();
 	sub->req = req;
-	sub->ptr = this;
+	sub->serv = this;
+	sub->cb = cb? cb : DEFAULT_JSONP_CALLBACK;
 	//sub->last_recv = ...
 	channel->add_subscriber(sub);
 	log_debug("channel: %d, add sub, sub_count: %d", channel->id, channel->sub_count);
 
 	evhttp_connection_set_closecb(req->evcon, on_disconnect, sub);
 
-	buf = evbuffer_new();
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
-	
-	evbuffer_add_printf(buf, "{type: \"welcome\", id: \"%d\", content: \"hello world!\"}\n", uid);
+
+	buf = evbuffer_new();
+	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"hello world!\"});\n",
+		sub->cb.c_str(),
+		channel->id);
 	evhttp_send_reply_chunk(req, buf);
 	evbuffer_free(buf);
 
@@ -79,45 +97,41 @@ int Server::pub(struct evhttp_request *req){
 	const char *uri = evhttp_request_get_uri(req);
 	evhttp_parse_query(uri, &params);
 
-	int uid = -1;
+	int cid = -1;
 	const char *content = "";
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
 		if(strcmp(kv->key, "id") == 0){
-			uid = atoi(kv->value);
+			cid = atoi(kv->value);
 		}else if(strcmp(kv->key, "content") == 0){
 			content = kv->value;
 		}
 	}
 	
 	Channel *channel = NULL;
-	if(uid < 0 || uid >= MAX_CHANNELS){
+	if(cid < 0 || cid >= MAX_CHANNELS){
 		channel = NULL;
 	}else{
-		channel = &channels[uid];
+		channel = &channels[cid];
 		log_debug("channel: %d, pub, sub_count: %d", channel->id, channel->sub_count);
 	}
 	if(!channel || !channel->subs){
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "id: %d not connected\n", uid);
+		evbuffer_add_printf(buf, "id: %d not connected\n", channel->id);
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
 	}
+	log_debug("pub: %d content: %s", channel->id, content);
 
+	// push to subscribers
+	channel->send("data", content);
+		
+	// response to publisher
 	struct evbuffer *buf = evbuffer_new();
-	for(Subscriber *sub = channel->subs; sub; sub=sub->next){
-		printf("pub: %d content: %s\n", uid, content);
-		
-		// push to subscriber
-		evbuffer_add_printf(buf, "{type: \"data\", id: \"%d\", content: \"%s\"}\n", uid, content);
-		evhttp_send_reply_chunk(sub->req, buf);
-		
-		// response to publisher
-		evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-		evbuffer_add_printf(buf, "ok\n");
-		evhttp_send_reply(req, 200, "OK", buf);
-	}
+	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	evbuffer_add_printf(buf, "ok\n");
+	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 
 	return 0;

@@ -10,7 +10,8 @@ tools/benchmark
 *.swp
 *.exe
 comet
-build_config.mk
+icomet
+config.mk
 deps/libevent-2.0.21-stable/test
 deps/libevent-2.0.21-stable/.deps
 deps/libevent-2.0.21-stable/.libs

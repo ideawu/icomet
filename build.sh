@@ -3,6 +3,8 @@ BASE_DIR=`pwd`
 TARGET_OS=`uname -s`
 JEMALLOC_PATH="$BASE_DIR/deps/jemalloc-3.3.1"
 LIBEVENT_PATH="$BASE_DIR/deps/libevent-2.0.21-stable"
+C=gcc
+CC=g++
 
 case "$TARGET_OS" in
     Darwin)
@@ -49,6 +51,10 @@ if [ ! -f Makefile ]; then
 fi
 cd "$DIR"
 
-rm -f build_config.mk
-echo "LIBEVENT_PATH=$LIBEVENT_PATH" >> build_config.mk
+echo C=$C
+echo CC=$CC
+echo CFLAGS :=
+echo CFLAGS += -g -Wall -Wno-sign-compare
+
+echo LIBEVENT_PATH=$LIBEVENT_PATH
 

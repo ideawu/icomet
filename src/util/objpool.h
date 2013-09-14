@@ -31,7 +31,7 @@ public:
 	
 	~ObjPool(){
 		for(int i=0; i<chunks.size(); i++){
-			delete chunks[i];
+			delete[] chunks[i];
 		}
 	}
 	

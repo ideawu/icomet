@@ -1,4 +1,4 @@
-include ../../build_config.mk
+include ../../config.mk
 
 CFLAGS += ${PLATFORM_CFLAGS}
 OBJS = log.o config.o
