@@ -9,8 +9,9 @@ CFLAGS += \
 all: $(OBJS)
 	$(CC) -o ../icomet \
 		$(CFLAGS) \
+		$(PLATFORM_LDFLAGS) \
+		util/*.o *.o icomet.cpp \
 		$(LIBEVENT_PATH)/.libs/libevent.a \
-		util/*.o *.o icomet.cpp
 
 channel.o: channel.h channel.cpp
 	$(CC) -c $(CFLAGS) channel.cpp

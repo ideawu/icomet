@@ -8,34 +8,34 @@ CC=g++
 
 case "$TARGET_OS" in
     Darwin)
-        PLATFORM_LDFLAGS="-pthread"
+        PLATFORM_LDFLAGS=""
         ;;
     Linux)
-        PLATFORM_LDFLAGS="-pthread"
+        PLATFORM_LDFLAGS="-lrt"
         ;;
     CYGWIN_*)
-        PLATFORM_LDFLAGS="-lpthread"
+        PLATFORM_LDFLAGS="-lrt"
         ;;
     SunOS)
-        PLATFORM_LIBS="-lpthread -lrt"
+        PLATFORM_LIBS="-lrt"
         ;;
     FreeBSD)
-        PLATFORM_LIBS="-lpthread"
+        PLATFORM_LIBS=""
         ;;
     NetBSD)
-        PLATFORM_LIBS="-lpthread -lgcc_s"
+        PLATFORM_LIBS=" -lgcc_s"
         ;;
     OpenBSD)
-        PLATFORM_LDFLAGS="-pthread"
+        PLATFORM_LDFLAGS=""
         ;;
     DragonFly)
-        PLATFORM_LIBS="-lpthread"
+        PLATFORM_LIBS=""
         ;;
     OS_ANDROID_CROSSCOMPILE)
         PLATFORM_LDFLAGS=""  # All pthread features are in the Android C library
         ;;
     HP-UX)
-        PLATFORM_LDFLAGS="-pthread"
+        PLATFORM_LDFLAGS=""
         ;;
     *)
         echo "Unknown platform!" >&2
@@ -55,6 +55,6 @@ echo C=$C
 echo CC=$CC
 echo CFLAGS :=
 echo CFLAGS += -g -Wall -Wno-sign-compare
-
-echo LIBEVENT_PATH=$LIBEVENT_PATH
+echo PLATFORM_LDFLAGS := $PLATFORM_LDFLAGS
+echo LIBEVENT_PATH = $LIBEVENT_PATH
 
