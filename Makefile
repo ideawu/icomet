@@ -1,4 +1,4 @@
-$(shell sh build.sh > config.mk)
+$(shell sh build.sh)
 include config.mk
 
 .PHONY: all tools clean

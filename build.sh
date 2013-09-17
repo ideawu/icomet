@@ -51,10 +51,12 @@ if [ ! -f Makefile ]; then
 fi
 cd "$DIR"
 
-echo C=$C
-echo CC=$CC
-echo CFLAGS :=
-echo CFLAGS += -g -Wall -Wno-sign-compare
-echo PLATFORM_LDFLAGS := $PLATFORM_LDFLAGS
-echo LIBEVENT_PATH = $LIBEVENT_PATH
+rm -f config.mk
+
+echo C=$C >> config.mk
+echo CC=$CC >> config.mk
+echo CFLAGS := >> config.mk
+echo CFLAGS += -g -Wall -Wno-sign-compare >> config.mk
+echo PLATFORM_LDFLAGS := $PLATFORM_LDFLAGS >> config.mk
+echo LIBEVENT_PATH = $LIBEVENT_PATH >> config.mk
 
