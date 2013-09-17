@@ -98,7 +98,7 @@ int main(int argc, char **argv){
 			log_fatal("bind admin_port %d error! %s", admin_port, strerror(errno));
 			exit(0);
 		}
-		log_info("admin server listen on 127.0.0.1:%d", admin_port);
+		log_info("admin server listen on 0.0.0.0:%d", admin_port);
 	}
 
 
@@ -113,7 +113,7 @@ int main(int argc, char **argv){
 				log_fatal("bind front_port %d error! %s", port, strerror(errno));
 				exit(0);
 			}
-			log_info("front server listen on 127.0.0.1:%d", port);
+			log_info("front server listen on 0.0.0.0:%d", port);
 		}
 	}
 

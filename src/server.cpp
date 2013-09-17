@@ -82,8 +82,6 @@ int Server::sub(struct evhttp_request *req){
 	channel->add_subscriber(sub);
 	log_debug("channel: %d, add sub, sub_count: %d", channel->id, channel->sub_count);
 
-	evhttp_connection_set_closecb(req->evcon, on_disconnect, sub);
-
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
@@ -94,6 +92,8 @@ int Server::sub(struct evhttp_request *req){
 		channel->id);
 	evhttp_send_reply_chunk(req, buf);
 	evbuffer_free(buf);
+
+	evhttp_connection_set_closecb(req->evcon, on_disconnect, sub);
 
 	return 0;
 }
