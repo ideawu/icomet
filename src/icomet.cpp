@@ -10,7 +10,7 @@
 #include "channel.h"
 #include "server.h"
 
-#define MAX_BIND_PORTS 10
+#define MAX_BIND_PORTS 100
 
 Server *serv;
 
@@ -28,7 +28,7 @@ void pub_handler(struct evhttp_request *req, void *arg){
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
-	serv->heartbeat();
+	//serv->heartbeat();
 }
 
 int main(int argc, char **argv){

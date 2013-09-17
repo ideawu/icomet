@@ -8,6 +8,8 @@
 #include <event2/bufferevent.h>
 #include "util/log.h"
 
+#define MAX_BIND_PORTS 100
+
 void chunk_cb(struct evhttp_request *req, void *arg){
 	char buf[1024];
 	int s = evbuffer_remove(req->input_buffer, &buf, sizeof(buf) - 1);
@@ -16,7 +18,7 @@ void chunk_cb(struct evhttp_request *req, void *arg){
 }
 
 void http_request_done(struct evhttp_request *req, void *arg){
-	log_debug("abc");
+	log_debug("request done");
 }
 
 int main(int argc, char **argv){
@@ -41,7 +43,7 @@ int main(int argc, char **argv){
 	int num = 0;
 	while(1){
 		log_debug("sub: %d", num);
-		conn = evhttp_connection_base_new(base, NULL, host, port + num%10);
+		conn = evhttp_connection_base_new(base, NULL, host, port + num % MAX_BIND_PORTS);
 		req = evhttp_request_new(http_request_done, NULL);
 		evhttp_request_set_chunked_cb(req, chunk_cb);
 
