@@ -21,11 +21,11 @@ void http_request_done(struct evhttp_request *req, void *arg){
 
 int main(int argc, char **argv){
 	if(argc < 3){
-		printf("Usage: %s start_id end_id\n", argv[0]);
+		printf("Usage: %s ip port\n", argv[0]);
 		exit(0);
 	}
-	int start_id = atoi(argv[1]);
-	int end_id = atoi(argv[2]);
+	const char *host = argv[1];
+	int port = atoi(argv[2]);
 	
 	signal(SIGPIPE, SIG_IGN);
 
@@ -37,24 +37,27 @@ int main(int argc, char **argv){
 
 	struct evhttp_connection *conn;
 	struct evhttp_request *req;
-	const char *host = "127.0.0.1";
-	int port = 8000;
 
-	for(int i=start_id; i<=end_id; i++){
-		log_debug("sub: %d", i);
-		
-		conn = evhttp_connection_base_new(base, NULL, host, port);
+	int num = 0;
+	while(1){
+		log_debug("sub: %d", num);
+		conn = evhttp_connection_base_new(base, NULL, host, port + num%10);
 		req = evhttp_request_new(http_request_done, NULL);
 		evhttp_request_set_chunked_cb(req, chunk_cb);
 
 		char buf[128];
-		snprintf(buf, sizeof(buf), "/sub?id=%d", i);
+		snprintf(buf, sizeof(buf), "/sub?id=%d", num);
 		evhttp_make_request(conn, req, EVHTTP_REQ_GET, buf);
-	    evhttp_connection_set_timeout(req->evcon, 864000);
-	    event_base_loop(base, EVLOOP_NONBLOCK);
-		
+		evhttp_connection_set_timeout(req->evcon, 864000);
+		event_base_loop(base, EVLOOP_NONBLOCK);
+    
+		if(num % 10000 == 9999){
+			printf("press Enter to continue: ");
+			getchar();
+		}   
+		num ++; 
 		usleep(1 * 1000);
-	}
+	}   
 
 	event_base_dispatch(base);
 	
