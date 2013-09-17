@@ -1,12 +1,12 @@
 include ../config.mk
 
 all:
-	${CC} ${CFLAGS} -o ./benchmark \
-		-I${LIBEVENT_PATH} \
-		-I${LIBEVENT_PATH}/compat \
-		-I${LIBEVENT_PATH}/include \
+	$(CC) $(CFLAGS) -o ./benchmark \
+		-I$(LIBEVENT_PATH) \
+		-I$(LIBEVENT_PATH)/compat \
+		-I$(LIBEVENT_PATH)/include \
 		-I../src \
-		${LIBEVENT_PATH}/.libs/libevent.a \
+		$(LIBEVENT_PATH)/.libs/libevent.a \
 		../src/util/*.o benchmark.cpp
 
 clean:
