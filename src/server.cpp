@@ -48,8 +48,9 @@ int Server::sub(struct evhttp_request *req){
 	const char *uri = evhttp_request_get_uri(req);
 	evhttp_parse_query(uri, &params);
 
-	struct evbuffer *buf;
-	
+	struct bufferevent *bev = evhttp_connection_get_bufferevent(req->evcon);
+	bufferevent_enable(bev, EV_READ);
+
 	int cid = -1;
 	const char *cb = NULL;
 	//const char *token = NULL;
@@ -86,6 +87,7 @@ int Server::sub(struct evhttp_request *req){
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
+	struct evbuffer *buf;
 	buf = evbuffer_new();
 	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"from icomet server!\"});\n",
 		sub->cb.c_str(),
