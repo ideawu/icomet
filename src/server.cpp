@@ -87,7 +87,7 @@ int Server::sub(struct evhttp_request *req){
 
 	struct evbuffer *buf;
 	buf = evbuffer_new();
-	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"from icomet server!\"});\n",
+	evbuffer_add_printf(buf, "%s({type: \"hello\", id: \"%d\", content: \"From icomet server.\"});\n",
 		sub->cb.c_str(),
 		channel->id);
 	evhttp_send_reply_chunk(req, buf);
