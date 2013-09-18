@@ -45,7 +45,7 @@ int main(int argc, char **argv){
 
 	int num = 0;
 	while(1){
-		if(num % 100000 == 1){
+		if(num % 100000 == 0){
 			printf("press Enter to continue: ");
 			getchar();
 		}   
@@ -63,7 +63,7 @@ int main(int argc, char **argv){
 		event_base_loop(base, EVLOOP_NONBLOCK);
     
 		num ++; 
-		usleep(0);
+		usleep(1 * 1000);
 	}   
 
 	event_base_dispatch(base);

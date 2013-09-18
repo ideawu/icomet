@@ -5,7 +5,7 @@
 #include "util/log.h"
 
 #define MAX_CHANNELS 1000000
-#define MAX_SUBSCRIBERS_PER_CHANNEL 32
+#define MAX_SUBSCRIBERS_PER_CHANNEL 16
 
 Server::Server(){
 	channels.resize(MAX_CHANNELS);
