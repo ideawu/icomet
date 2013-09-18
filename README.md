@@ -1,7 +1,7 @@
 icomet
 ======
 
-A C/C++ comet server built with libevent
+A C1000K comet server built with libevent
 
 ## Usage
 
