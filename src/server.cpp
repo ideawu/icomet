@@ -38,7 +38,7 @@ int Server::heartbeat(){
 		if(!channel->subs){
 			continue;
 		}
-		channel->send("noop", "");
+		//channel->send("noop", "");
 	}
 	return 0;
 }
