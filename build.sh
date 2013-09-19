@@ -75,7 +75,7 @@ cd "$DIR"
 
 ######### generate config.h #########
 
-rm -f cibfug.h
+rm -f config.h
 echo "#ifndef ICOMET_CONFIG_H" >> config.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> config.h
 if [[ $TARGET_OS == CYGWIN* ]]; then
