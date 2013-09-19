@@ -45,7 +45,7 @@ public:
 	}
 	
 	void free(T *t){
-		pool.push_back(t);
+		pool.push_front(t);
 	}
 };
 

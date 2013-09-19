@@ -16,6 +16,7 @@ public:
 	Channel *channel;
 	struct evhttp_request *req;
 	std::string cb;
+	int idle;
 };
 
 class Channel{
@@ -30,8 +31,6 @@ public:
 	~Channel();
 	void add_subscriber(Subscriber *sub);
 	void del_subscriber(Subscriber *sub);
-	
-	void send(const char *type, const char *content);
 };
 
 #endif

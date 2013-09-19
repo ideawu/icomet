@@ -28,7 +28,7 @@ void pub_handler(struct evhttp_request *req, void *arg){
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
-	//serv->heartbeat();
+	serv->check_timeout();
 }
 
 int main(int argc, char **argv){
@@ -65,7 +65,7 @@ int main(int argc, char **argv){
 	timer_event = event_new(base, -1, EV_PERSIST, timer_cb, NULL);
 	{
 		struct timeval tv;
-		tv.tv_sec = 5;
+		tv.tv_sec = SUB_CHECK_INTERVAL;
 		tv.tv_usec = 0;
 		if(!timer_event || evtimer_add(timer_event, &tv)<0){
 			fprintf(stderr, "Could not create/add a timer event!\n");
@@ -115,6 +115,8 @@ int main(int argc, char **argv){
 			}
 			log_info("front server listen on 0.0.0.0:%d", port);
 		}
+		
+		// /ping?cb=js_callback
 	}
 
 

@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>icomet chat</title>
+	<style type="text/css">
+	body{
+		margin: 0;
+		padding: 0 12px;
+		font-size: 14px;
+		font-family: arial;
+		background: #fff;
+	}
+	.chat_window{
+		padding: 4px;
+		width: 300px;
+		height: 320px;
+		border: 1px solid #ccc;
+		overflow-y: scroll;
+	}
+	button{padding: 4px 6px; font-size: 14px;}
+	#login_form *{
+		font-size: 16px;
+	}
+	#login_form{
+		font-size: 18px;
+		margin: 120px auto;
+		padding: 50px 40px;
+		width: 320px;
+		text-align: center;
+		border: 2px solid #996;
+		background: #cfc;
+	}
+	</style>
+	<script src="js/jquery-1.9.1.js"></script>
+	<script src="js/icomet.js"></script>
+</head>
+<body>
+
+<script>
+function login(){
+	var cid = $('*[name=channel_id]').val();
+	
+	var comet = new iComet(cid, function(msg){
+		$('#recv_chat_window').append('recv: ' + msg.content + '<br/>');
+	});
+	comet.sub();
+
+	$('#login_form').hide();
+	$('#chat_window').show();
+	$('#chat_window h3').html('Channel: ' + cid);
+}
+
+function send(){
+	var t = $('#chat_window textarea[name=content]');
+	
+	var data = {};
+	data.id = $('*[name=channel_id]').val();
+	data.content = t.val();
+	$.get('http://127.0.0.1:8000/pub', data, function(){
+		//
+	});
+	
+	$('#send_chat_window').append(t.val() + '<br/>');
+	t.val('');
+}
+
+$(function(){
+	//login();
+});
+</script>
+
+<div id="login_form">
+	Channel ID: <input type="text" name="channel_id" size="8" value="12" />
+	<button onclick="login()">Login</button>
+</div>
+
+<div id="chat_window" style="display: none;">
+	<h3></h3>
+	<div style="width: 320px; margin: 12px 0;">
+		<textarea name="content" style="width:99%; height: 80px;"></textarea>
+		<div style="text-align: right;">
+			<button class="send" onclick="send()">Send</button>
+		</div>
+	</div>
+	
+	<table>
+		<tr>
+			<td>
+				Sent:
+				<div id="send_chat_window" class="chat_window"></div>
+			</td>
+			<td>
+				Received:
+				<div id="recv_chat_window" class="chat_window"></div>
+			</td>
+		</tr>
+	</table>
+</div>
+
+</body>
+</html>
