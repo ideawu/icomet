@@ -1,3 +1,5 @@
+version.h
+config.h
 *.o
 *.lo
 *.a

@@ -1,6 +1,7 @@
 #ifndef ICOMET_SERVER_H
 #define ICOMET_SERVER_H
 
+#include "../config.h"
 #include <vector>
 #include <evhttp.h>
 #include <event2/http.h>
