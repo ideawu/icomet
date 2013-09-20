@@ -25,3 +25,10 @@ curl -v "http://127.0.0.1:8000/pub?id=12&content=hi"
 | 1,000,000 | 2734m | 2720m |
 
 2.7KB per connection.
+
+## Run the chat demo
+
+1. Compile and start icomet server
+1. Drag and drop the file web/chat.html into one web browser
+1. Drag and drop the file web/chat.html into another different web browser
+1. Start instant chatting!

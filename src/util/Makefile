@@ -1,16 +1,15 @@
 include ../../config.mk
 
-CFLAGS += ${PLATFORM_CFLAGS}
 OBJS = log.o config.o
 EXES = 
 
 all: ${OBJS}
 
 log.o: log.h log.cpp
-	g++ ${CFLAGS} -c log.cpp
+	g++ -c ${CFLAGS} log.cpp
 
 config.o: config.h config.cpp
-	g++ ${CFLAGS} -c config.cpp
+	g++ -c ${CFLAGS} config.cpp
 
 clean:
 	rm -f ${EXES} ${OBJS}

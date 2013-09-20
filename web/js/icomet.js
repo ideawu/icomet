@@ -12,65 +12,85 @@ function iComet(cid, callback){
 	self.cid = cid;
 	self.url = '#';
 	self.sub_cb = callback;
+	self.timer = null;
+	self.url = 'http://127.0.0.1:8100/sub?id=' + self.cid + '&cb=' + self.cb;
+	self.stopped = true;
 
-	self.aa = null;
-	self.sub = function(){
-		self.url = 'http://127.0.0.1:8100/sub?id=' + self.cid + '&cb=' + self.cb;
+	var self_sub = function(){
+		self.stopped = false;
 		setTimeout(function(){
-			self.stop();
 			self.num_connected ++;
-
-			var script = '\<script src="' + self.url + '">\<\/script>';
-			$('body').append(script);
-	
 			self.last_sub_time = (new Date()).getTime();
-			window[self.cb] = function(msg){
-				if(self.num_connected <= 0){
-					return;
-				}
-				self.num_connected --;
-				if(self.num_connected != 0){
-					self.log('ignore exceeded connections');
-					return;
-				}
 
-				self.sub();
-				if(!msg){
-					self.log('noop');
-					return;
-				}
-				self.log(msg);
-
-				// TODO:
-				if(msg.seq != self.last_seq + 1){
-					// return;
-				}
-				self.last_seq = msg.seq;
-				if(self.sub_cb){
-					self.sub_cb(msg);
-				}
-			}
+			$('script.' + self.cb).remove();
+			var url = self.url + '&_=' + new Date().getTime();
+			var script = '\<script class="' + self.cb + '\" src="' + url + '">\<\/script>';
+			$('body').append(script);
 		}, 0);
 	}
-	
-	self.stop = function(){
-		$('script').each(function(i, e){
-			if($(e).attr('src') && $(e).attr('src').indexOf(self.url) == 0){
-				//console.log('remove', e.src);
-				$(e).remove();
+
+	window[self.cb] = function(msg){
+		if(self.stopped){
+			return;
+		}
+		if(self.num_connected <= 0){
+			return;
+		}
+		self.num_connected --;
+		if(self.num_connected != 0){
+			self.log('ignore exceeded connections');
+			return;
+		}
+		if(msg){
+			if(msg.type != 'data'){
+				self.log(msg);
+				self.stop();
 			}
-		});
+			if(msg.type == '404'){
+				//
+			}else if(msg.type == '429'){
+				setTimeout(self._start_timeout_checker, self.timeout * 2);
+			}
+			if(msg.type != 'data'){
+				return;
+			}
+		}
+
+		self_sub();
+		if(!msg){
+			self.log('noop');
+			return;
+		}
+		self.log(msg);
+
+		// TODO:
+		if(msg.seq != self.last_seq + 1){
+			// return;
+		}
+		self.last_seq = msg.seq;
+		if(self.sub_cb){
+			self.sub_cb(msg);
+		}
+	}
+
+	self.stop = function(){
+		self.stopped = true;
+		if(self.timer){
+			clearTimeout(self.timer);
+		}
 	}
 	
-	self.timer = setInterval(function(){
-		var now = (new Date()).getTime();
-		if(now - self.last_sub_time > self.timeout){
-			self.log('timeout');
-			self.last_sub_time = now;
-			self.num_connected = 0;
-			self.sub();
-		}
-	}, 1000);
+	self._start_timeout_checker = function(){
+		self.timer = setInterval(function(){
+			var now = (new Date()).getTime();
+			if(now - self.last_sub_time > self.timeout){
+				self.log('timeout');
+				self.last_sub_time = now;
+				self.num_connected = 0;
+				self_sub();
+			}
+		}, 1000);
+	}
 	
 	self.log = function(){
 		var v = arguments;
@@ -89,4 +109,7 @@ function iComet(cid, callback){
 			console.log(p, v);
 		}
 	}
+	
+	self._start_timeout_checker();
+	self_sub();
 }

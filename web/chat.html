@@ -42,9 +42,10 @@ function login(){
 	var cid = $('*[name=channel_id]').val();
 	
 	var comet = new iComet(cid, function(msg){
-		$('#recv_chat_window').append('recv: ' + msg.content + '<br/>');
+		var div = $('#recv_chat_window');
+		div.append('<b>recv:</b> ' + msg.content.replace(/\n/g, '<br/>') + '<br/>');
+		div.scrollTop(div[0].scrollHeight);
 	});
-	comet.sub();
 
 	$('#login_form').hide();
 	$('#chat_window').show();
@@ -56,7 +57,12 @@ function send(){
 	
 	var data = {};
 	data.id = $('*[name=channel_id]').val();
-	data.content = t.val();
+	data.content = t.val()
+		.replace(/\\/g, '\\\\')
+		.replace(/"/g, '\\"')
+		.replace(/\r/g, '\\r')
+		.replace(/\n/g, '\\n')
+		;
 	$.get('http://127.0.0.1:8000/pub', data, function(){
 		//
 	});

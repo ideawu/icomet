@@ -16,17 +16,24 @@ public:
 	Server *serv;
 	Channel *channel;
 	struct evhttp_request *req;
-	std::string cb;
+	std::string callback;
 	int idle;
 };
 
 class Channel{
 public:
+	Channel *prev;
+	Channel *next;
+
+	struct{
+		int size;
+		Subscriber *head;
+		Subscriber *tail;
+	}subs;
+
 	int id;
-	int sub_count;
-	Subscriber *subs;
-	// TODO: msg_list
 	int seq_send;
+	// TODO: msg_list
 	
 	Channel();
 	~Channel();

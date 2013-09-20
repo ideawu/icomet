@@ -17,8 +17,17 @@
 
 class Server{
 private:
-	std::vector<Channel> channels;
+	std::vector<Channel> channel_slots;
 	ObjPool<Subscriber> sub_pool;
+	
+	struct{
+		int size;
+		Channel *head;
+		Channel *tail;
+	}channels;
+	
+	void add_channel(Channel *channel);
+	void del_channel(Channel *channel);
 	
 	void channel_send(Channel *channel, const char *type, const char *content);
 public:

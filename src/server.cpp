@@ -4,16 +4,28 @@
 #include <event2/keyvalq_struct.h>
 #include "server.h"
 #include "util/log.h"
+#include "util/list.h"
 
 Server::Server(){
-	channels.resize(MAX_CHANNELS);
-	for(int i=0; i<channels.size(); i++){
-		Channel *channel = &channels[i];
+	channel_slots.resize(MAX_CHANNELS);
+	for(int i=0; i<channel_slots.size(); i++){
+		Channel *channel = &channel_slots[i];
 		channel->id = i;
 	}
+	list_reset(channels);
 }
 
 Server::~Server(){
+}
+
+void Server::add_channel(Channel *channel){
+	assert(channel->subs.size == 0);
+	list_add(channels, channel);
+}
+
+void Server::del_channel(Channel *channel){
+	assert(channel->subs.size == 0);
+	list_del(channels, channel);
 }
 
 static void on_connection_close(struct evhttp_connection *evcon, void *arg){
@@ -27,24 +39,27 @@ int Server::sub_end(Subscriber *sub){
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
 	sub_pool.free(sub);
-	log_debug("channel: %d, del sub, sub_count: %d", channel->id, channel->sub_count);
+	
+	if(channel->subs.size == 0){
+		this->del_channel(channel);
+	}
+	log_debug("channels: %d, ch: %d, del sub, subs: %d",
+		channels.size, channel->id, channel->subs.size);
 	return 0;
 }
 
 int Server::check_timeout(){
 	//log_debug("<");
 	struct evbuffer *buf = evbuffer_new();
-	for(int i=0; i<channels.size(); i++){
-		Channel *channel = &channels[i];
-		if(!channel->subs){
+	for(Channel *channel = channels.head; channel; channel=channel->next){
+		if(!channel->subs.size){
 			continue;
 		}
-
-		for(Subscriber *sub = channel->subs; sub; sub=sub->next){
+		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
 			if(++sub->idle < SUB_MAX_IDLES){
 				continue;
 			}
-			evbuffer_add_printf(buf, "%s();\n", sub->cb.c_str());
+			evbuffer_add_printf(buf, "%s();\n", sub->callback.c_str());
 			evhttp_send_reply_chunk(sub->req, buf);
 			evhttp_send_reply_end(sub->req);
 			//
@@ -62,16 +77,14 @@ int Server::sub(struct evhttp_request *req){
 		evhttp_send_reply(req, 405, "Invalid Method", NULL);
 		return 0;
 	}
+	bufferevent_enable(evhttp_connection_get_bufferevent(req->evcon), EV_READ);
 	
 	struct evkeyvalq params;
 	const char *uri = evhttp_request_get_uri(req);
 	evhttp_parse_query(uri, &params);
 
-	struct bufferevent *bev = evhttp_connection_get_bufferevent(req->evcon);
-	bufferevent_enable(bev, EV_READ);
-
 	int cid = -1;
-	const char *cb = NULL;
+	const char *cb = DEFAULT_JSONP_CALLBACK;
 	//const char *token = NULL;
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
@@ -82,14 +95,26 @@ int Server::sub(struct evhttp_request *req){
 		}
 	}
 	
-	if(cid < 0 || cid >= channels.size()){
-		evhttp_send_reply(req, 404, "Not Found", NULL);
+	if(cid < 0 || cid >= channel_slots.size()){
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf,
+			"%s({type: \"404\", cid: \"%d\", seq: \"0\", content: \"Not Found\"});\n",
+			cb,
+			cid);
+		evhttp_send_reply(req, HTTP_OK, "OK", buf);
+		evbuffer_free(buf);
 		return 0;
 	}
 	
-	Channel *channel = &channels[cid];
-	if(channel->sub_count >= MAX_SUBS_PER_CHANNEL){
-		evhttp_send_reply(req, 429, "Too Many Requests", NULL);
+	Channel *channel = &channel_slots[cid];
+	if(channel->subs.size >= MAX_SUBS_PER_CHANNEL){
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf,
+			"%s({type: \"429\", cid: \"%d\", seq: \"0\", content: \"Too Many Requests\"});\n",
+			cb,
+			cid);
+		evhttp_send_reply(req, HTTP_OK, "OK", buf);
+		evbuffer_free(buf);
 		return 0;
 	}
 	
@@ -97,17 +122,20 @@ int Server::sub(struct evhttp_request *req){
 	sub->req = req;
 	sub->serv = this;
 	sub->idle = 0;
-	sub->cb = cb? cb : DEFAULT_JSONP_CALLBACK;
-	//evutil_gettimeofday(&sub->time, NULL);
+	sub->callback = cb;
 	//sub->last_recv = ...
+	
+	if(channel->subs.size == 0){
+		this->add_channel(channel);
+	}
 	channel->add_subscriber(sub);
-	log_debug("channel: %d, add sub, sub_count: %d", channel->id, channel->sub_count);
+	log_debug("channels: %d, ch: %d, add sub, subs: %d",
+		channels.size, channel->id, channel->subs.size);
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
 	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
-
 	return 0;
 }
 
@@ -136,16 +164,16 @@ int Server::pub(struct evhttp_request *req){
 	if(cid < 0 || cid >= MAX_CHANNELS){
 		channel = NULL;
 	}else{
-		channel = &channels[cid];
+		channel = &channel_slots[cid];
 	}
-	if(!channel || !channel->subs){
+	if(!channel || !channel->subs.size){
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf, "id: %d not connected\n", cid);
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
 	}
-	log_debug("pub: %d, sub_count: %d, content: %s", channel->id, channel->sub_count, content);
+	log_debug("ch: %d, subs: %d, pub content: %s", channel->id, channel->subs.size, content);
 
 	// push to subscribers
 	channel_send(channel, "data", content);
@@ -162,10 +190,10 @@ int Server::pub(struct evhttp_request *req){
 
 void Server::channel_send(Channel *channel, const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
-	for(Subscriber *sub = channel->subs; sub; sub=sub->next){
+	for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
 		evbuffer_add_printf(buf,
 			"%s({type: \"%s\", cid: \"%d\", seq: \"%d\", content: \"%s\"});\n",
-			sub->cb.c_str(),
+			sub->callback.c_str(),
 			type,
 			channel->id,
 			channel->seq_send,
