@@ -162,6 +162,20 @@ std::string double_to_str(double v){
 	return std::string(buf);
 }
 
+static inline
+int parse_ip_port(const char *addr, std::string *ip, int *port){
+	char *sep = strchr(addr, ':');
+	if(!sep){
+		return -1;
+	}
+	ip->assign(addr, sep - addr);
+	*port = atoi(sep + 1);
+	if(*port < 0 || *port > 65535){
+		return -1;
+	}
+	return 0;
+}
+
 
 // is big endia. TODO: auto detect
 #if 0

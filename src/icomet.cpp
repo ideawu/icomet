@@ -31,7 +31,7 @@ struct event *sigterm_event = NULL;
 void init(int argc, char **argv);
 
 void welcome(){
-	printf("icomet %s\n", ICOMET_VERSION);
+	printf("icomet server %s\n", ICOMET_VERSION);
 	printf("Copyright (c) 2013 ideawu.com\n");
 	printf("\n");
 }
@@ -75,12 +75,15 @@ int main(int argc, char **argv){
 	welcome();
 	init(argc, argv);
 
-	log_info("starting icomet...");
+	log_info("starting icomet %s...", ICOMET_VERSION);
 
-	std::string admin_ip = conf->get_str("admin.ip");
-	std::string front_ip = conf->get_str("front.ip");
-	int admin_port = conf->get_num("admin.port");
-	int front_port = conf->get_num("front.port");
+	std::string admin_ip;
+	std::string front_ip;
+	int admin_port;
+	int front_port;
+	
+	parse_ip_port(conf->get_str("admin.listen"), &admin_ip, &admin_port);
+	parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
 
 	{
 		// /pub?id=123&content=hi or /pub?uid=xxx&content=hi
@@ -94,13 +97,6 @@ int main(int argc, char **argv){
 		// /stat?id=123 or /stat?uid=xxx
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
 		// /check?id=123,234
-		/*
-		struct evhttp_bound_socket *handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
-		if(!handle){
-			log_fatal("bind admin_port %d error! %s", admin_port, strerror(errno));
-			exit(0);
-		}
-		*/
 		
 		struct evhttp_bound_socket *handle;
 		handle = evhttp_bind_socket_with_handle(admin_http, admin_ip.c_str(), admin_port);
