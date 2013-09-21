@@ -52,7 +52,6 @@ void sub_handler(struct evhttp_request *req, void *arg){
 }
 
 void ping_handler(struct evhttp_request *req, void *arg){
-	log_debug("");
 	serv->ping(req);
 }
 

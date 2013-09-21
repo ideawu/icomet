@@ -140,9 +140,6 @@ int Server::sub(struct evhttp_request *req){
 }
 
 int Server::ping(struct evhttp_request *req){
-	evhttp_send_reply(req, HTTP_OK, "OK", NULL);
-	return 0;
-	/*
 	struct evkeyvalq params;
 	const char *uri = evhttp_request_get_uri(req);
 	evhttp_parse_query(uri, &params);
@@ -164,7 +161,6 @@ int Server::ping(struct evhttp_request *req){
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
 	evbuffer_free(buf);
 	return 0;
-	*/
 }
 
 int Server::pub(struct evhttp_request *req){
