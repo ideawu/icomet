@@ -59,7 +59,12 @@ int Server::check_timeout(){
 			if(++sub->idle < SUB_MAX_IDLES){
 				continue;
 			}
-			evbuffer_add_printf(buf, "%s();\n", sub->callback.c_str());
+			evbuffer_add_printf(buf,
+				"%s({type: \"noop\", cid: \"%d\", seq: \"%d\"});\n",
+				sub->callback.c_str(),
+				channel->id,
+				sub->noop_seq
+				);
 			evhttp_send_reply_chunk(sub->req, buf);
 			evhttp_send_reply_end(sub->req);
 			//
@@ -84,12 +89,18 @@ int Server::sub(struct evhttp_request *req){
 	evhttp_parse_query(uri, &params);
 
 	int cid = -1;
+	int seq = 0;
+	int noop = 0;
 	const char *cb = DEFAULT_JSONP_CALLBACK;
 	//const char *token = NULL;
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
 		if(strcmp(kv->key, "id") == 0){
 			cid = atoi(kv->value);
+		}else if(strcmp(kv->key, "seq") == 0){
+			seq = atoi(kv->value);
+		}else if(strcmp(kv->key, "noop") == 0){
+			noop = atoi(kv->value);
 		}else if(strcmp(kv->key, "cb") == 0){
 			cb = kv->value;
 		}
@@ -122,8 +133,8 @@ int Server::sub(struct evhttp_request *req){
 	sub->req = req;
 	sub->serv = this;
 	sub->idle = 0;
+	sub->noop_seq = noop;
 	sub->callback = cb;
-	//sub->last_recv = ...
 	
 	if(channel->subs.size == 0){
 		this->add_channel(channel);
@@ -155,7 +166,7 @@ int Server::ping(struct evhttp_request *req){
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
 	evbuffer_add_printf(buf,
-		"%s({sub_timeout: %d});\n",
+		"%s({type: \"ping\", sub_timeout: %d});\n",
 		cb,
 		SUB_IDLE_TIMEOUT);
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);

@@ -67,7 +67,7 @@ void pub_handler(struct evhttp_request *req, void *arg){
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
-	//serv->check_timeout();
+	serv->check_timeout();
 }
 
 void accept_error_cb(struct evconnlistener *lis, void *ptr){

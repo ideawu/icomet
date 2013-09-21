@@ -18,6 +18,7 @@ public:
 	struct evhttp_request *req;
 	std::string callback;
 	int idle;
+	int noop_seq;
 };
 
 class Channel{
