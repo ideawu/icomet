@@ -8,13 +8,11 @@ CC=g++
 
 case "$TARGET_OS" in
     Darwin)
-        PLATFORM_LDFLAGS=""
         ;;
     Linux)
-        PLATFORM_LDFLAGS="-lrt"
+        PLATFORM_LIBS="-lrt -pthread"
         ;;
     CYGWIN_*)
-        PLATFORM_LDFLAGS="-lrt"
         ;;
     SunOS)
         PLATFORM_LIBS="-lrt"
@@ -26,16 +24,13 @@ case "$TARGET_OS" in
         PLATFORM_LIBS=" -lgcc_s"
         ;;
     OpenBSD)
-        PLATFORM_LDFLAGS=""
         ;;
     DragonFly)
         PLATFORM_LIBS=""
         ;;
     OS_ANDROID_CROSSCOMPILE)
-        PLATFORM_LDFLAGS=""  # All pthread features are in the Android C library
         ;;
     HP-UX)
-        PLATFORM_LDFLAGS=""
         ;;
     *)
         echo "Unknown platform!" >&2
@@ -95,12 +90,12 @@ echo C=$C >> config.mk
 echo CC=$CC >> config.mk
 echo CFLAGS := >> config.mk
 echo CFLAGS += -g -O2 -Wall -Wno-sign-compare >> config.mk
-echo CFLAGS += $PLATFORM_LDFLAGS >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH\" >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> config.mk
 
 echo CLIBS := >> config.mk
+echo CFLAGS += $PLATFORM_LIBS >> config.mk
 
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
