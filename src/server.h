@@ -35,8 +35,10 @@ public:
 	~Server();
 	
 	int sub(struct evhttp_request *req);
-	int pub(struct evhttp_request *req);
 	int sub_end(Subscriber *sub);
+	int ping(struct evhttp_request *req);
+
+	int pub(struct evhttp_request *req);
 	int check_timeout();
 };
 

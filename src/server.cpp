@@ -139,6 +139,34 @@ int Server::sub(struct evhttp_request *req){
 	return 0;
 }
 
+int Server::ping(struct evhttp_request *req){
+	evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+	return 0;
+	/*
+	struct evkeyvalq params;
+	const char *uri = evhttp_request_get_uri(req);
+	evhttp_parse_query(uri, &params);
+
+	const char *cb = DEFAULT_JSONP_CALLBACK;
+	struct evkeyval *kv;
+	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
+		if(strcmp(kv->key, "cb") == 0){
+			cb = kv->value;
+		}
+	}
+
+	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf,
+		"%s({sub_timeout: %d});\n",
+		cb,
+		SUB_IDLE_TIMEOUT);
+	evhttp_send_reply(req, HTTP_OK, "OK", buf);
+	evbuffer_free(buf);
+	return 0;
+	*/
+}
+
 int Server::pub(struct evhttp_request *req){
 	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
 		evhttp_send_reply(req, 405, "Invalid Method", NULL);

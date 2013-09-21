@@ -11,6 +11,6 @@ tools:
 	cd tools; make
 
 clean:
-	rm -f *.exe.stackdump
+	rm -f *.exe.stackdump icomet
 	cd src/util; make clean
 	cd src; make clean

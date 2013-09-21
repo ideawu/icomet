@@ -43,13 +43,17 @@ void usage(int argc, char **argv){
 	//printf("    -d    run as daemon\n");
 }
 
-
 void signal_cb(evutil_socket_t sig, short events, void *user_data){
 	event_base_loopbreak(evbase);
 }
 
 void sub_handler(struct evhttp_request *req, void *arg){
 	serv->sub(req);
+}
+
+void ping_handler(struct evhttp_request *req, void *arg){
+	log_debug("");
+	serv->ping(req);
 }
 
 void pub_handler(struct evhttp_request *req, void *arg){
@@ -64,7 +68,7 @@ void pub_handler(struct evhttp_request *req, void *arg){
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
-	serv->check_timeout();
+	//serv->check_timeout();
 }
 
 void accept_error_cb(struct evconnlistener *lis, void *ptr){
@@ -79,8 +83,8 @@ int main(int argc, char **argv){
 
 	std::string admin_ip;
 	std::string front_ip;
-	int admin_port;
-	int front_port;
+	int admin_port = 0;
+	int front_port = 0;
 	
 	parse_ip_port(conf->get_str("admin.listen"), &admin_ip, &admin_port);
 	parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
@@ -90,13 +94,13 @@ int main(int argc, char **argv){
 		// content must be json encoded string without leading and trailing quotes
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?uid=xxx
+		// /sign[?uid=xxx]
 		// 销毁通道
 		// /close?id=123 or /close?uid=xxx
 		// 获取通道的信息
 		// /stat?id=123 or /stat?uid=xxx
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?id=123,234
+		// /check?id=123,234 or /check?uid=123,234
 		
 		struct evhttp_bound_socket *handle;
 		handle = evhttp_bind_socket_with_handle(admin_http, admin_ip.c_str(), admin_port);
@@ -144,8 +148,11 @@ int main(int argc, char **argv){
 	}
 
 	{
-		// /sub?cb=jsonp&id=123&token=&[last_seq=123]
-		evhttp_set_cb(front_http, "/sub", sub_handler, NULL);	
+		// /sub?cb=jsonp&id=123&token=&[seq=123]
+		evhttp_set_cb(front_http, "/sub", sub_handler, NULL);
+		// /ping?cb=jsonp
+		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);
+
 		for(int i=0; i<MAX_BIND_PORTS; i++){
 			int port = front_port + i;
 			
@@ -160,8 +167,6 @@ int main(int argc, char **argv){
 			struct evconnlistener *listener = evhttp_bound_socket_get_listener(handle);
 			evconnlistener_set_error_cb(listener, accept_error_cb);
 		}
-		
-		// /ping?cb=jsonp
 	}
 
 	log_info("icomet started");
