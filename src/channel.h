@@ -33,7 +33,7 @@ public:
 	}subs;
 
 	int id;
-	int seq_send;
+	int seq;
 	// TODO: msg_list
 	
 	Channel();

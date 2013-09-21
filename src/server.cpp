@@ -216,7 +216,7 @@ int Server::pub(struct evhttp_request *req){
 	// response to publisher
 	struct evbuffer *buf = evbuffer_new();
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	evbuffer_add_printf(buf, "ok %d\n", channel->seq_send);
+	evbuffer_add_printf(buf, "ok %d\n", channel->seq);
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 
@@ -231,7 +231,7 @@ void Server::channel_send(Channel *channel, const char *type, const char *conten
 			sub->callback.c_str(),
 			type,
 			channel->id,
-			channel->seq_send,
+			channel->seq,
 			content);
 		evhttp_send_reply_chunk(sub->req, buf);
 		evhttp_send_reply_end(sub->req);
@@ -242,7 +242,7 @@ void Server::channel_send(Channel *channel, const char *type, const char *conten
 	evbuffer_free(buf);
 
 	if(strcmp(type, "data") == 0){
-		channel->seq_send ++;
+		channel->seq ++;
 	}
 }
 

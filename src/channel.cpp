@@ -5,7 +5,7 @@
 #include "util/list.h"
 
 Channel::Channel(){
-	this->seq_send = 0;
+	this->seq = 0;
 	list_reset(subs);
 }
 

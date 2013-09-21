@@ -57,7 +57,9 @@ function iComet(cid, callback){
 				}else{
 					self.noop_seq ++;
 				}
-				self_sub();
+				// if the channel is empty, it is probably empty next time,
+				// so pause some seconds before sub again
+				setTimeout(self_sub, 2000 + Math.random() * 3000);
 			}else{
 				self.log('ignore exceeded connections');
 			}
@@ -113,6 +115,7 @@ function iComet(cid, callback){
 	}
 
 	var self_sub = function(){
+		//self.log('sub');
 		self.stopped = false;
 		self.last_sub_time = (new Date()).getTime();
 		$('script.' + self.cb).remove();
@@ -142,7 +145,7 @@ function iComet(cid, callback){
 			}
 		});
 		if(!self.ping_timer){
-			self.ping_timer = setInterval(self.start, 3000);
+			self.ping_timer = setInterval(self.start, 3000 + Math.random() * 2000);
 		}
 		if(self.timer){
 			clearTimeout(self.timer);
