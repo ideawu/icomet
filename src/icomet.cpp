@@ -254,7 +254,7 @@ void init(int argc, char **argv){
 	timer_event = event_new(evbase, -1, EV_PERSIST, timer_cb, NULL);
 	{
 		struct timeval tv;
-		tv.tv_sec = SUB_CHECK_INTERVAL;
+		tv.tv_sec = CHANNEL_CHECK_INTERVAL;
 		tv.tv_usec = 0;
 		if(!timer_event || evtimer_add(timer_event, &tv)<0){
 			fprintf(stderr, "Could not create/add a timer event!\n");

@@ -21,7 +21,21 @@ function iComet(cid, callback){
 	self.sub_url = 'http://127.0.0.1:8100/sub?id=' + self.cid + '&cb=' + self.cb;
 	self.ping_url = 'http://127.0.0.1:8100/ping?cb=' + self.cb;
 
-	window[self.cb] = function(msg){
+	window[self.cb] = function(msg, in_batch){
+		// batch repsonse
+		if(msg instanceof Array){
+			self.log('batch response', msg.length);
+			for(var i in msg){
+				if(msg[i] && msg[i].type == 'data'){
+					if(i == msg.length - 1){
+						window[self.cb](msg[i]);
+					}else{
+						window[self.cb](msg[i], true);
+					}
+				}
+			}
+			return;
+		}
 		//self.log('resp', msg);
 		if(self.stopped){
 			return;
@@ -59,8 +73,7 @@ function iComet(cid, callback){
 				}
 				// if the channel is empty, it is probably empty next time,
 				// so pause some seconds before sub again
-				//setTimeout(self_sub, 2000 + Math.random() * 3000);
-				self_sub();
+				setTimeout(self_sub, 2000 + Math.random() * 3000);
 			}else{
 				self.log('ignore exceeded connections');
 			}
@@ -84,12 +97,14 @@ function iComet(cid, callback){
 				}else{
 					self.data_seq ++;
 				}
-				// fast reconnect
-				var now = new Date().getTime();
-				if(self.need_fast_reconnect || now - self.last_sub_time > 3 * 1000){
-					self.log('fast reconnect');
-					self.need_fast_reconnect = false;
-					self_sub();
+				if(!in_batch){
+					// fast reconnect
+					var now = new Date().getTime();
+					if(self.need_fast_reconnect || now - self.last_sub_time > 3 * 1000){
+						self.log('fast reconnect');
+						self.need_fast_reconnect = false;
+						self_sub();
+					}
 				}
 			}else{
 				self.log('proc', msg);
@@ -98,9 +113,11 @@ function iComet(cid, callback){
 				}else{
 					self.data_seq ++;
 				}
-				self_sub();
 				if(self.sub_cb){
 					self.sub_cb(msg);
+				}
+				if(!in_batch){
+					self_sub();
 				}
 			}
 			return;

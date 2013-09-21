@@ -35,26 +35,20 @@ static void on_connection_close(struct evhttp_connection *evcon, void *arg){
 	serv->sub_end(sub);
 }
 
-int Server::sub_end(Subscriber *sub){
-	Channel *channel = sub->channel;
-	channel->del_subscriber(sub);
-	sub_pool.free(sub);
-	
-	if(channel->subs.size == 0){
-		this->del_channel(channel);
-	}
-	log_debug("channels: %d, ch: %d, del sub, subs: %d",
-		channels.size, channel->id, channel->subs.size);
-	return 0;
-}
-
 int Server::check_timeout(){
 	//log_debug("<");
 	struct evbuffer *buf = evbuffer_new();
 	for(Channel *channel = channels.head; channel; channel=channel->next){
-		if(!channel->subs.size){
+		if(channel->subs.size == 0){
+			if(++channel->idle > CHANNEL_MAX_IDLES){
+				log_debug("delete channel: %d", channel->id);
+				this->del_channel(channel);
+				channel->reset();
+			}
 			continue;
 		}
+		channel->idle = 0;
+
 		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
 			if(++sub->idle < SUB_MAX_IDLES){
 				continue;
@@ -74,6 +68,16 @@ int Server::check_timeout(){
 	}
 	evbuffer_free(buf);
 	//log_debug(">");
+	return 0;
+}
+
+int Server::sub_end(Subscriber *sub){
+	Channel *channel = sub->channel;
+	channel->del_subscriber(sub);
+	sub_pool.free(sub);
+	
+	log_debug("channels: %d, ch: %d, del sub, subs: %d",
+		channels.size, channel->id, channel->subs.size);
 	return 0;
 }
 
@@ -128,6 +132,42 @@ int Server::sub(struct evhttp_request *req){
 		evbuffer_free(buf);
 		return 0;
 	}
+	if(channel->idle == -1){
+		log_debug("new channel: %d", channel->id);
+		this->add_channel(channel);
+	}
+	channel->idle = 0;
+	
+	if(!channel->msg_list.empty() && (channel->msg_seq_max - seq) >= 0){
+		std::vector<std::string>::iterator it = channel->msg_list.begin();
+		int msg_seq_min = channel->msg_seq_max - channel->msg_list.size() + 1;
+		int offset = seq - msg_seq_min;
+		if(offset > 0){ // seq > msg_seq_min
+			it += offset;
+		}else{
+			seq = msg_seq_min;
+		}
+		log_debug("send old msg: [%d, %d]", seq, channel->msg_seq_max);
+
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf, "%s([", cb);
+		for(/**/; it != channel->msg_list.end(); it++, seq++){
+			std::string &msg = *it;
+			evbuffer_add_printf(buf,
+				"{type: \"data\", cid: \"%d\", seq: \"%d\", content: \"%s\"}",
+				cid,
+				seq,
+				msg.c_str());
+			if(seq != channel->msg_seq_max){
+				evbuffer_add(buf, ",", 1);
+			}
+		}
+		evbuffer_add_printf(buf, "]);\n");
+		evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+		evhttp_send_reply(req, HTTP_OK, "OK", buf);
+		evbuffer_free(buf);
+		return 0;
+	}
 	
 	Subscriber *sub = sub_pool.alloc();
 	sub->req = req;
@@ -136,9 +176,6 @@ int Server::sub(struct evhttp_request *req){
 	sub->noop_seq = noop;
 	sub->callback = cb;
 	
-	if(channel->subs.size == 0){
-		this->add_channel(channel);
-	}
 	channel->add_subscriber(sub);
 	log_debug("channels: %d, ch: %d, add sub, subs: %d",
 		channels.size, channel->id, channel->subs.size);
@@ -201,7 +238,7 @@ int Server::pub(struct evhttp_request *req){
 	}else{
 		channel = &channel_slots[cid];
 	}
-	if(!channel || !channel->subs.size){
+	if(!channel || channel->idle == -1){
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf, "id: %d not connected\n", cid);
 		evhttp_send_reply(req, 404, "Not Found", buf);
@@ -209,9 +246,6 @@ int Server::pub(struct evhttp_request *req){
 		return 0;
 	}
 	log_debug("ch: %d, subs: %d, pub content: %s", channel->id, channel->subs.size, content);
-
-	// push to subscribers
-	channel_send(channel, "data", content);
 		
 	// response to publisher
 	struct evbuffer *buf = evbuffer_new();
@@ -220,29 +254,9 @@ int Server::pub(struct evhttp_request *req){
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 
+	// push to subscribers
+	channel->send("data", content);
+
 	return 0;
-}
-
-void Server::channel_send(Channel *channel, const char *type, const char *content){
-	struct evbuffer *buf = evbuffer_new();
-	for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
-		evbuffer_add_printf(buf,
-			"%s({type: \"%s\", cid: \"%d\", seq: \"%d\", content: \"%s\"});\n",
-			sub->callback.c_str(),
-			type,
-			channel->id,
-			channel->seq,
-			content);
-		evhttp_send_reply_chunk(sub->req, buf);
-		evhttp_send_reply_end(sub->req);
-		//
-		evhttp_connection_set_closecb(sub->req->evcon, NULL, NULL);
-		this->sub_end(sub);
-	}
-	evbuffer_free(buf);
-
-	if(strcmp(type, "data") == 0){
-		channel->seq ++;
-	}
 }
 
