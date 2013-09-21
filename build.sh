@@ -95,7 +95,7 @@ echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> config.mk
 
 echo CLIBS := >> config.mk
-echo CFLAGS += $PLATFORM_LIBS >> config.mk
+echo CLIBS += $PLATFORM_LIBS >> config.mk
 
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
