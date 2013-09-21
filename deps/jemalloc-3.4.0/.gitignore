@@ -19,6 +19,7 @@
 /test/*.out
 /test/[a-zA-Z_]*
 !test/*.c
+!test/*.in
 !test/*.exp
 /VERSION
 /bin/jemalloc.sh
