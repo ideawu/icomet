@@ -57,13 +57,24 @@ void ping_handler(struct evhttp_request *req, void *arg){
 
 void pub_handler(struct evhttp_request *req, void *arg){
 	bool pass = ip_filter->check_pass(req->remote_host);
-	if(pass){
-		serv->pub(req);
-	}else{
+	if(!pass){
 		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
 		evhttp_add_header(req->output_headers, "Connection", "Close");
 		evhttp_send_reply(req, 403, "Forbidden", NULL);
+		return;
 	}
+	serv->pub(req);
+}
+
+void sign_handler(struct evhttp_request *req, void *arg){
+	bool pass = ip_filter->check_pass(req->remote_host);
+	if(!pass){
+		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
+		evhttp_add_header(req->output_headers, "Connection", "Close");
+		evhttp_send_reply(req, 403, "Forbidden", NULL);
+		return;
+	}
+	serv->sign(req);
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
@@ -89,17 +100,18 @@ int main(int argc, char **argv){
 	parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
 
 	{
-		// /pub?id=123&content=hi or /pub?uid=xxx&content=hi
+		// /pub?id=123&content=hi
 		// content must be json encoded string without leading and trailing quotes
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign[?uid=xxx]
+		// /sign?id=123
+		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
-		// /close?id=123 or /close?uid=xxx
+		// /close?id=123
 		// 获取通道的信息
-		// /stat?id=123 or /stat?uid=xxx
+		// /stat?id=123
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?id=123,234 or /check?uid=123,234
+		// /check?id=123,234
 		
 		struct evhttp_bound_socket *handle;
 		handle = evhttp_bind_socket_with_handle(admin_http, admin_ip.c_str(), admin_port);
@@ -114,6 +126,7 @@ int main(int argc, char **argv){
 		// TODO: modify libevent, add evhttp_set_accept_cb()
 	}
 
+	ip_filter = new IpFilter();
 	// init admin ip_filter
 	{
 		Config *cc = (Config *)conf->get("admin");
@@ -166,6 +179,18 @@ int main(int argc, char **argv){
 			struct evconnlistener *listener = evhttp_bound_socket_get_listener(handle);
 			evconnlistener_set_error_cb(listener, accept_error_cb);
 		}
+	}
+	int max_channels = conf->get_num("front.max_channels");
+	int max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
+	std::string auth = conf->get_str("front.auth");
+	
+	log_info("    auth %s", auth.c_str());
+	log_info("    max_channels %d", max_channels);
+	log_info("    max_subscribers_per_channel %d", max_subscribers_per_channel);
+	
+	serv = new Server(max_channels, max_subscribers_per_channel);
+	if(auth == "token"){
+		serv->auth = Server::AUTH_TOKEN;
 	}
 
 	log_info("icomet started");
@@ -261,7 +286,4 @@ void init(int argc, char **argv){
 			exit(0);
 		}
 	}
-
-	ip_filter = new IpFilter();
-	serv = new Server();
 }

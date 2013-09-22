@@ -9,8 +9,6 @@
 #include "util/objpool.h"
 
 #define DEFAULT_JSONP_CALLBACK	"icomet_cb"
-#define MAX_CHANNELS			1000000
-#define MAX_SUBS_PER_CHANNEL	16
 #define CHANNEL_CHECK_INTERVAL	3
 #define CHANNEL_IDLE_TIMEOUT	12
 #define CHANNEL_MAX_IDLES		(CHANNEL_IDLE_TIMEOUT/CHANNEL_CHECK_INTERVAL)
@@ -21,6 +19,8 @@ class Server{
 private:
 	std::vector<Channel> channel_slots;
 	ObjPool<Subscriber> sub_pool;
+	int max_channels;
+	int max_subscribers_per_channel;
 	
 	struct{
 		int size;
@@ -31,7 +31,14 @@ private:
 	void add_channel(Channel *channel);
 	void del_channel(Channel *channel);
 public:
-	Server();
+	enum{
+		AUTH_NONE = 0,
+		AUTH_TOKEN = 1
+	};
+
+	int auth;
+	
+	Server(int max_channels, int max_subscribers_per_channel);
 	~Server();
 	
 	int sub(struct evhttp_request *req);
@@ -39,6 +46,7 @@ public:
 	int ping(struct evhttp_request *req);
 
 	int pub(struct evhttp_request *req);
+	int sign(struct evhttp_request *req);
 	int check_timeout();
 };
 

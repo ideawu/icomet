@@ -44,12 +44,19 @@ function iComet(cid, callback){
 			return;
 		}
 		if(msg.type == '404'){
-			// TODO
+			self.log('resp', msg);
+			// TODO channel id error!
+			return;
+		}
+		if(msg.type == '401'){
+			// TODO token error!
+			self.log('resp', msg);
 			return;
 		}
 		if(msg.type == '429'){
-			self.stop();
-			self.start();
+			// too many connections
+			self.log('resp', msg);
+			setTimeout(self_sub, 5000 + Math.random() * 5000);
 			return;
 		}
 		if(msg.type == 'ping'){

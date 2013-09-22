@@ -6,8 +6,12 @@
 #include "util/log.h"
 #include "util/list.h"
 
-Server::Server(){
-	channel_slots.resize(MAX_CHANNELS);
+Server::Server(int max_channels, int max_subscribers_per_channel){
+	this->auth = AUTH_NONE;
+	this->max_channels = max_channels;
+	this->max_subscribers_per_channel = max_subscribers_per_channel;
+
+	channel_slots.resize(this->max_channels);
 	for(int i=0; i<channel_slots.size(); i++){
 		Channel *channel = &channel_slots[i];
 		channel->id = i;
@@ -83,7 +87,7 @@ int Server::sub_end(Subscriber *sub){
 
 int Server::sub(struct evhttp_request *req){
 	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
-		evhttp_send_reply(req, 405, "Invalid Method", NULL);
+		evhttp_send_reply(req, 405, "Method Not Allowed", NULL);
 		return 0;
 	}
 	bufferevent_enable(evhttp_connection_get_bufferevent(req->evcon), EV_READ);
@@ -96,7 +100,7 @@ int Server::sub(struct evhttp_request *req){
 	int seq = 0;
 	int noop = 0;
 	const char *cb = DEFAULT_JSONP_CALLBACK;
-	//const char *token = NULL;
+	const char *token = "";
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
 		if(strcmp(kv->key, "id") == 0){
@@ -107,6 +111,8 @@ int Server::sub(struct evhttp_request *req){
 			noop = atoi(kv->value);
 		}else if(strcmp(kv->key, "cb") == 0){
 			cb = kv->value;
+		}else if(strcmp(kv->key, "token") == 0){
+			token = kv->value;
 		}
 	}
 	
@@ -122,7 +128,28 @@ int Server::sub(struct evhttp_request *req){
 	}
 	
 	Channel *channel = &channel_slots[cid];
-	if(channel->subs.size >= MAX_SUBS_PER_CHANNEL){
+	if(this->auth == AUTH_TOKEN && (channel->idle == -1 || channel->token != token)){
+		log_debug("%s:%d, Token Error, cid: %d, token: %s",
+			req->remote_host,
+			req->remote_port,
+			cid,
+			token
+			);
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf,
+			"%s({type: \"401\", cid: \"%d\", seq: \"0\", content: \"Token Error\"});\n",
+			cb,
+			cid);
+		evhttp_send_reply(req, HTTP_OK, "OK", buf);
+		evbuffer_free(buf);
+		return 0;
+	}
+	if(channel->subs.size >= this->max_subscribers_per_channel){
+		log_debug("%s:%d, Too Many Requests, cid: %d",
+			req->remote_host,
+			req->remote_port,
+			cid
+			);
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf,
 			"%s({type: \"429\", cid: \"%d\", seq: \"0\", content: \"Too Many Requests\"});\n",
@@ -137,17 +164,19 @@ int Server::sub(struct evhttp_request *req){
 		this->add_channel(channel);
 	}
 	channel->idle = 0;
+
+	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+	evhttp_add_header(req->output_headers, "Expires", "0");
 	
-	if(!channel->msg_list.empty() && (channel->msg_seq_max - seq) >= 0){
-		std::vector<std::string>::iterator it = channel->msg_list.begin();
-		int msg_seq_min = channel->msg_seq_max - channel->msg_list.size() + 1;
-		int offset = seq - msg_seq_min;
-		if(offset > 0){ // seq > msg_seq_min
-			it += offset;
-		}else{
+	if(!channel->msg_list.empty() && Channel::SEQ_GT(channel->seq_next, seq)){
+		std::vector<std::string>::iterator it = channel->msg_list.end();
+		int msg_seq_min = channel->seq_next - channel->msg_list.size();
+		if(Channel::SEQ_GT(msg_seq_min, seq)){
 			seq = msg_seq_min;
 		}
-		log_debug("send old msg: [%d, %d]", seq, channel->msg_seq_max);
+		it -= (channel->seq_next - seq);
+		log_debug("send old msg: [%d, %d]", seq, channel->seq_next - 1);
 
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf, "%s([", cb);
@@ -158,12 +187,11 @@ int Server::sub(struct evhttp_request *req){
 				cid,
 				seq,
 				msg.c_str());
-			if(seq != channel->msg_seq_max){
+			if(seq != channel->seq_next - 1){
 				evbuffer_add(buf, ",", 1);
 			}
 		}
 		evbuffer_add_printf(buf, "]);\n");
-		evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 		evhttp_send_reply(req, HTTP_OK, "OK", buf);
 		evbuffer_free(buf);
 		return 0;
@@ -180,9 +208,7 @@ int Server::sub(struct evhttp_request *req){
 	log_debug("channels: %d, ch: %d, add sub, subs: %d",
 		channels.size, channel->id, channel->subs.size);
 
-	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
-
 	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
 	return 0;
 }
@@ -201,6 +227,8 @@ int Server::ping(struct evhttp_request *req){
 	}
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+	evhttp_add_header(req->output_headers, "Expires", "0");
 	struct evbuffer *buf = evbuffer_new();
 	evbuffer_add_printf(buf,
 		"%s({type: \"ping\", sub_timeout: %d});\n",
@@ -233,7 +261,7 @@ int Server::pub(struct evhttp_request *req){
 	}
 	
 	Channel *channel = NULL;
-	if(cid < 0 || cid >= MAX_CHANNELS){
+	if(cid < 0 || cid >= this->max_channels){
 		channel = NULL;
 	}else{
 		channel = &channel_slots[cid];
@@ -248,9 +276,9 @@ int Server::pub(struct evhttp_request *req){
 	log_debug("ch: %d, subs: %d, pub content: %s", channel->id, channel->subs.size, content);
 		
 	// response to publisher
-	struct evbuffer *buf = evbuffer_new();
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	evbuffer_add_printf(buf, "ok %d\n", channel->seq);
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 
@@ -260,3 +288,54 @@ int Server::pub(struct evhttp_request *req){
 	return 0;
 }
 
+int Server::sign(struct evhttp_request *req){
+	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
+		evhttp_send_reply(req, 405, "Invalid Method", NULL);
+		return 0;
+	}
+	
+	struct evkeyvalq params;
+	const char *uri = evhttp_request_get_uri(req);
+	evhttp_parse_query(uri, &params);
+
+	int cid = -1;
+	struct evkeyval *kv;
+	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
+		if(strcmp(kv->key, "id") == 0){
+			cid = atoi(kv->value);
+		}
+	}
+	
+	Channel *channel = NULL;
+	if(cid < 0 || cid >= this->max_channels){
+		channel = NULL;
+	}else{
+		channel = &channel_slots[cid];
+	}
+	
+	if(!channel){
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf, "Invalid channel: %d\n", cid);
+		evhttp_send_reply(req, 404, "Not Found", buf);
+		evbuffer_free(buf);
+		return 0;
+	}
+
+	if(channel->idle == -1){
+		channel->create_token();
+		log_debug("sign new channel: %d, token: %s", channel->id, channel->token.c_str());
+		this->add_channel(channel);
+	}
+	channel->idle = 0;
+
+	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf, "{cid: %d, seq: %d, token: \"%s\"}\n",
+		channel->id,
+		channel->msg_seq_min(),
+		channel->token.c_str());
+	evhttp_send_reply(req, 200, "OK", buf);
+	evbuffer_free(buf);
+
+	return 0;
+}

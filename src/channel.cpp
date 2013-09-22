@@ -13,9 +13,9 @@ Channel::~Channel(){
 }
 
 void Channel::reset(){
-	seq = 0;
+	seq_next = 0;
 	idle = -1;
-	msg_seq_max = 0;
+	token.clear();
 	msg_list.clear();
 	list_reset(subs);
 }
@@ -30,6 +30,29 @@ void Channel::del_subscriber(Subscriber *sub){
 	list_del(subs, sub);
 }
 
+void Channel::create_token(){
+	static bool init_rand = false;
+	if(!init_rand){
+		srand(time(NULL) + getpid());
+		init_rand = true;
+	}
+
+	token.resize(33);
+	char *buf = (char *)token.data();
+	int offset = 0;
+	while(1){
+		int r = rand();
+		int len = snprintf(buf + offset, token.size() - offset, "%08x", r);
+		if(len == -1){
+			break;
+		}
+		offset += len;
+		if(offset >= token.size() - 1){
+			break;
+		}
+	}
+}
+
 void Channel::send(const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
 	for(Subscriber *sub = this->subs.head; sub; sub=sub->next){
@@ -38,7 +61,7 @@ void Channel::send(const char *type, const char *content){
 			sub->callback.c_str(),
 			type,
 			this->id,
-			this->seq,
+			this->seq_next,
 			content);
 		evhttp_send_reply_chunk(sub->req, buf);
 		evhttp_send_reply_end(sub->req);
@@ -49,13 +72,12 @@ void Channel::send(const char *type, const char *content){
 	evbuffer_free(buf);
 
 	if(strcmp(type, "data") == 0){
-		msg_seq_max = this->seq;
 		msg_list.push_back(content);
-		this->seq ++;
+		seq_next ++;
 		if(msg_list.size() >= CHANNEL_MSG_LIST_SIZE * 1.5){
 			std::vector<std::string>::iterator it = msg_list.end() - CHANNEL_MSG_LIST_SIZE;
 			msg_list.assign(it, msg_list.end());
-			log_debug("resize msg_list: %d", msg_list.size());
+			log_debug("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
 		}
 	}
 }
