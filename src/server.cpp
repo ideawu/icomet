@@ -1,17 +1,17 @@
+#include "../config.h"
 #include <http-internal.h>
 #include <event2/http.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include "server.h"
+#include "server_config.h"
 #include "util/log.h"
 #include "util/list.h"
 
-Server::Server(int max_channels, int max_subscribers_per_channel){
+Server::Server(){
 	this->auth = AUTH_NONE;
-	this->max_channels = max_channels;
-	this->max_subscribers_per_channel = max_subscribers_per_channel;
 
-	channel_slots.resize(this->max_channels);
+	channel_slots.resize(ServerConfig::max_channels);
 	for(int i=0; i<channel_slots.size(); i++){
 		Channel *channel = &channel_slots[i];
 		channel->id = i;
@@ -33,7 +33,7 @@ void Server::del_channel(Channel *channel){
 }
 
 static void on_connection_close(struct evhttp_connection *evcon, void *arg){
-	log_debug("connection closed");
+	log_trace("connection closed");
 	Subscriber *sub = (Subscriber *)arg;
 	Server *serv = sub->serv;
 	serv->sub_end(sub);
@@ -45,7 +45,7 @@ int Server::check_timeout(){
 	for(Channel *channel = channels.head; channel; channel=channel->next){
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
-				log_debug("delete channel: %d", channel->id);
+				log_trace("delete channel: %d", channel->id);
 				this->del_channel(channel);
 				channel->reset();
 			}
@@ -82,7 +82,7 @@ int Server::sub_end(Subscriber *sub){
 	channel->del_subscriber(sub);
 	sub_pool.free(sub);
 	
-	log_debug("channels: %d, ch: %d, del sub, subs: %d",
+	log_trace("channels: %d, ch: %d, del sub, subs: %d",
 		channels.size, channel->id, channel->subs.size);
 	return 0;
 }
@@ -130,7 +130,9 @@ int Server::sub(struct evhttp_request *req){
 	}
 	
 	Channel *channel = &channel_slots[cid];
-	if(this->auth == AUTH_TOKEN && (channel->idle == -1 || channel->token != token)){
+	if(this->auth == AUTH_TOKEN &&
+		(channel->idle == -1 || channel->token.empty() || channel->token != token))
+	{
 		log_debug("%s:%d, Token Error, cid: %d, token: %s",
 			req->remote_host,
 			req->remote_port,
@@ -146,7 +148,7 @@ int Server::sub(struct evhttp_request *req){
 		evbuffer_free(buf);
 		return 0;
 	}
-	if(channel->subs.size >= this->max_subscribers_per_channel){
+	if(channel->subs.size >= ServerConfig::max_subscribers_per_channel){
 		log_debug("%s:%d, Too Many Requests, cid: %d",
 			req->remote_host,
 			req->remote_port,
@@ -162,7 +164,7 @@ int Server::sub(struct evhttp_request *req){
 		return 0;
 	}
 	if(channel->idle == -1){
-		log_debug("new channel: %d", channel->id);
+		log_trace("new channel: %d", channel->id);
 		this->add_channel(channel);
 	}
 	channel->idle = CHANNEL_MAX_IDLES;
@@ -207,7 +209,7 @@ int Server::sub(struct evhttp_request *req){
 	sub->callback = cb;
 	
 	channel->add_subscriber(sub);
-	log_debug("channels: %d, ch: %d, add sub, subs: %d",
+	log_trace("channels: %d, ch: %d, add sub, subs: %d",
 		channels.size, channel->id, channel->subs.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
@@ -263,14 +265,15 @@ int Server::pub(struct evhttp_request *req){
 	}
 	
 	Channel *channel = NULL;
-	if(cid < 0 || cid >= this->max_channels){
+	if(cid < 0 || cid >= ServerConfig::max_channels){
 		channel = NULL;
 	}else{
 		channel = &channel_slots[cid];
 	}
 	if(!channel || channel->idle == -1){
+		log_trace("channel %d offline, pub content: %s", cid, content);
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "id: %d not connected\n", cid);
+		evbuffer_add_printf(buf, "channel %d not connected\n", cid);
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
@@ -315,7 +318,7 @@ int Server::sign(struct evhttp_request *req){
 	}
 	
 	Channel *channel = NULL;
-	if(cid < 0 || cid >= this->max_channels){
+	if(cid < 0 || cid >= ServerConfig::max_channels){
 		channel = NULL;
 	}else{
 		channel = &channel_slots[cid];
@@ -329,8 +332,10 @@ int Server::sign(struct evhttp_request *req){
 		return 0;
 	}
 
-	if(channel->idle == -1){
+	if(channel->token.empty()){
 		channel->create_token();
+	}
+	if(channel->idle == -1){
 		log_debug("sign: %d, token: %s, expires: %d",
 			channel->id, channel->token.c_str(), expires);
 		this->add_channel(channel);

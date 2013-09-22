@@ -1,7 +1,6 @@
 #ifndef ICOMET_CHANNEL_H
 #define ICOMET_CHANNEL_H
 
-#include "../config.h"
 #include <string>
 #include <vector>
 #include <evhttp.h>
@@ -18,10 +17,10 @@ public:
 	
 	Server *serv;
 	Channel *channel;
-	struct evhttp_request *req;
 	std::string callback;
 	int idle;
 	int noop_seq;
+	struct evhttp_request *req;
 };
 
 class Channel{

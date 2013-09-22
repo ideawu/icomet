@@ -14,9 +14,15 @@
 #include "util/strings.h"
 #include "channel.h"
 #include "server.h"
+#include "server_config.h"
 #include "ip_filter.h"
 
-#define MAX_BIND_PORTS 2
+// for testing
+#define MAX_BIND_PORTS 1
+
+int ServerConfig::max_channels					= 1000;
+int ServerConfig::max_messages_per_channel		= 10;
+int ServerConfig::max_subscribers_per_channel	= 2;
 
 Server *serv = NULL;
 Config *conf = NULL;
@@ -48,6 +54,7 @@ void signal_cb(evutil_socket_t sig, short events, void *user_data){
 }
 
 void sub_handler(struct evhttp_request *req, void *arg){
+	rand();
 	serv->sub(req);
 }
 
@@ -78,6 +85,7 @@ void sign_handler(struct evhttp_request *req, void *arg){
 }
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
+	rand();
 	serv->check_timeout();
 }
 
@@ -85,11 +93,19 @@ void accept_error_cb(struct evconnlistener *lis, void *ptr){
 	// do nothing
 }
 
-int main(int argc, char **argv){	
+int main(int argc, char **argv){
 	welcome();
 	init(argc, argv);
+	
+	// TODO:
+	set_log_level(Logger::LEVEL_MAX);
 
 	log_info("starting icomet %s...", ICOMET_VERSION);
+	
+	// TODO:
+	ServerConfig::max_channels = conf->get_num("front.max_channels");
+	ServerConfig::max_messages_per_channel = conf->get_num("front.max_messages_per_channel");
+	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
 
 	std::string admin_ip;
 	std::string front_ip;
@@ -180,15 +196,14 @@ int main(int argc, char **argv){
 			evconnlistener_set_error_cb(listener, accept_error_cb);
 		}
 	}
-	int max_channels = conf->get_num("front.max_channels");
-	int max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
 	std::string auth = conf->get_str("front.auth");
 	
 	log_info("    auth %s", auth.c_str());
-	log_info("    max_channels %d", max_channels);
-	log_info("    max_subscribers_per_channel %d", max_subscribers_per_channel);
+	log_info("    max_channels %d", ServerConfig::max_channels);
+	log_info("    max_messages_per_channel %d", ServerConfig::max_messages_per_channel);
+	log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
 	
-	serv = new Server(max_channels, max_subscribers_per_channel);
+	serv = new Server();
 	if(auth == "token"){
 		serv->auth = Server::AUTH_TOKEN;
 	}
@@ -216,6 +231,15 @@ void init(int argc, char **argv){
 		exit(0);
 	}
 	signal(SIGPIPE, SIG_IGN);
+
+	{
+		struct timeval tv;
+		if(gettimeofday(&tv, NULL) == -1){
+			srand(time(NULL) + getpid());
+		}else{
+			srand(tv.tv_sec + tv.tv_usec + getpid());
+		}
+	}
 
 	bool is_daemon = false;
 	const char *conf_file = NULL;

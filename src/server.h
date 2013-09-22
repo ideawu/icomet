@@ -1,7 +1,6 @@
 #ifndef ICOMET_SERVER_H
 #define ICOMET_SERVER_H
 
-#include "../config.h"
 #include <vector>
 #include <evhttp.h>
 #include <event2/http.h>
@@ -19,8 +18,6 @@ class Server{
 private:
 	std::vector<Channel> channel_slots;
 	ObjPool<Subscriber> sub_pool;
-	int max_channels;
-	int max_subscribers_per_channel;
 	
 	struct{
 		int size;
@@ -38,7 +35,7 @@ public:
 
 	int auth;
 	
-	Server(int max_channels, int max_subscribers_per_channel);
+	Server();
 	~Server();
 	
 	int sub(struct evhttp_request *req);

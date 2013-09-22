@@ -1,9 +1,11 @@
+#include "../config.h"
 #include "channel.h"
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
 #include "util/log.h"
 #include "util/list.h"
 #include "server.h"
+#include "server_config.h"
 
 Channel::Channel(){
 	reset();
@@ -31,12 +33,7 @@ void Channel::del_subscriber(Subscriber *sub){
 }
 
 void Channel::create_token(){
-	static bool init_rand = false;
-	if(!init_rand){
-		srand(time(NULL) + getpid());
-		init_rand = true;
-	}
-
+	// TODO: rand() is not safe?
 	token.resize(33);
 	char *buf = (char *)token.data();
 	int offset = 0;
@@ -51,6 +48,7 @@ void Channel::create_token(){
 			break;
 		}
 	}
+	token.resize(32);
 }
 
 void Channel::send(const char *type, const char *content){
@@ -74,10 +72,11 @@ void Channel::send(const char *type, const char *content){
 	if(strcmp(type, "data") == 0){
 		msg_list.push_back(content);
 		seq_next ++;
-		if(msg_list.size() >= CHANNEL_MSG_LIST_SIZE * 1.5){
-			std::vector<std::string>::iterator it = msg_list.end() - CHANNEL_MSG_LIST_SIZE;
+		if(msg_list.size() >= ServerConfig::max_messages_per_channel * 1.5){
+			std::vector<std::string>::iterator it;
+			it = msg_list.end() - ServerConfig::max_messages_per_channel;
 			msg_list.assign(it, msg_list.end());
-			log_debug("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
+			log_trace("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
 		}
 	}
 }
