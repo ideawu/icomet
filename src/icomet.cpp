@@ -104,7 +104,7 @@ int main(int argc, char **argv){
 		// content must be json encoded string without leading and trailing quotes
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?id=123
+		// /sign?id=123&[expires=60], wait 60 seconds before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
 		// /close?id=123

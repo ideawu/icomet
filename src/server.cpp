@@ -44,14 +44,16 @@ int Server::check_timeout(){
 	struct evbuffer *buf = evbuffer_new();
 	for(Channel *channel = channels.head; channel; channel=channel->next){
 		if(channel->subs.size == 0){
-			if(++channel->idle > CHANNEL_MAX_IDLES){
+			if(--channel->idle < 0){
 				log_debug("delete channel: %d", channel->id);
 				this->del_channel(channel);
 				channel->reset();
 			}
 			continue;
 		}
-		channel->idle = 0;
+		if(channel->idle < CHANNEL_MAX_IDLES){
+			channel->idle = CHANNEL_MAX_IDLES;
+		}
 
 		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
 			if(++sub->idle < SUB_MAX_IDLES){
@@ -163,20 +165,20 @@ int Server::sub(struct evhttp_request *req){
 		log_debug("new channel: %d", channel->id);
 		this->add_channel(channel);
 	}
-	channel->idle = 0;
+	channel->idle = CHANNEL_MAX_IDLES;
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	evhttp_add_header(req->output_headers, "Expires", "0");
 	
-	if(!channel->msg_list.empty() && Channel::SEQ_GT(channel->seq_next, seq)){
+	if(!channel->msg_list.empty() && channel->seq_next != seq){
 		std::vector<std::string>::iterator it = channel->msg_list.end();
 		int msg_seq_min = channel->seq_next - channel->msg_list.size();
-		if(Channel::SEQ_GT(msg_seq_min, seq)){
+		if(Channel::SEQ_GT(seq, channel->seq_next) || Channel::SEQ_GT(msg_seq_min, seq)){
 			seq = msg_seq_min;
 		}
-		it -= (channel->seq_next - seq);
 		log_debug("send old msg: [%d, %d]", seq, channel->seq_next - 1);
+		it -= (channel->seq_next - seq);
 
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf, "%s([", cb);
@@ -299,11 +301,17 @@ int Server::sign(struct evhttp_request *req){
 	evhttp_parse_query(uri, &params);
 
 	int cid = -1;
+	int expires = 0;
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
 		if(strcmp(kv->key, "id") == 0){
 			cid = atoi(kv->value);
+		}else if(strcmp(kv->key, "expires") == 0){
+			expires = atoi(kv->value);
 		}
+	}
+	if(expires <= 0){
+		expires = CHANNEL_IDLE_TIMEOUT;
 	}
 	
 	Channel *channel = NULL;
@@ -323,17 +331,22 @@ int Server::sign(struct evhttp_request *req){
 
 	if(channel->idle == -1){
 		channel->create_token();
-		log_debug("sign new channel: %d, token: %s", channel->id, channel->token.c_str());
+		log_debug("sign: %d, token: %s, expires: %d",
+			channel->id, channel->token.c_str(), expires);
 		this->add_channel(channel);
+	}else{
+		log_debug("re-sign: %d, token: %s, expires: %d",
+			channel->id, channel->token.c_str(), expires);
 	}
-	channel->idle = 0;
+	channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf, "{cid: %d, seq: %d, token: \"%s\"}\n",
+	evbuffer_add_printf(buf, "{cid: %d, seq: %d, token: \"%s\", expires: %d}\n",
 		channel->id,
 		channel->msg_seq_min(),
-		channel->token.c_str());
+		channel->token.c_str(),
+		expires);
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 

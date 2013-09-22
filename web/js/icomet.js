@@ -88,7 +88,13 @@ function iComet(cid, callback){
 		}
 		if(msg.type == 'data'){
 			if(msg.seq != self.data_seq){
-				if(msg.seq < self.data_seq){
+				if(msg.seq == 0){
+					self.log('server restarted');
+					// TODO: lost_cb(msg);
+					if(self.sub_cb){
+						self.sub_cb(msg);
+					}
+				}else if(msg.seq < self.data_seq){
 					self.log('drop', msg);
 				}else{
 					self.log('msg lost', msg);
