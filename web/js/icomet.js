@@ -1,4 +1,15 @@
-function iComet(cid, callback){
+/*
+config = {
+	// sign_url usually link to a app server,
+	// and icomet.admin deny all, but allow app server
+	sign_url: 'http://...',
+	// sub_url link directly to icomet server
+	sub_url: 'http://...',
+	// be called when receive a msg
+	sub_callback: function(msg){}
+};
+*/
+function iComet(config){
 	if(iComet.id__ == undefined){
 		iComet.id__ = 0;
 	}
@@ -6,20 +17,31 @@ function iComet(cid, callback){
 	var self = this;
 	self.id = iComet.id__++;
 	self.cb = 'icomet_cb_' + self.id;
-	self.sub_timeout = 35 * 1000;
-	self.cid = cid;
+	self.sub_timeout = 60 * 1000;
 	self.timer = null;
-	self.ping_timer = null;
+	self.sign_timer = null;
 	self.stopped = true;
 	self.last_sub_time = 0;
 	self.need_fast_reconnect = true;
 
 	self.data_seq = 0;
 	self.noop_seq = 0;
-	self.sub_cb = callback;
-	self.ping_cb = null;
-	self.sub_url = 'http://127.0.0.1:8100/sub?id=' + self.cid + '&cb=' + self.cb;
-	self.ping_url = 'http://127.0.0.1:8100/ping?cb=' + self.cb;
+	self.sign_cb = null;
+	
+	self.cid = config.cid;
+	self.sub_cb = config.sub_callback;
+	if(config.sub_url.indexOf('?') == -1){
+		self.sub_url = config.sub_url + '?';
+	}else{
+		self.sub_url = config.sub_url + '&';
+	}
+	if(config.sign_url.indexOf('?') == -1){
+		self.sign_url = config.sign_url + '?';
+	}else{
+		self.sign_url = config.sign_url + '&';
+	}
+	self.sub_url += 'cb=' + self.cb;
+	self.sign_url += 'cb=' + self.cb;
 
 	window[self.cb] = function(msg, in_batch){
 		// batch repsonse
@@ -59,18 +81,15 @@ function iComet(cid, callback){
 			setTimeout(self_sub, 5000 + Math.random() * 5000);
 			return;
 		}
-		if(msg.type == 'ping'){
+		if(msg.type == 'sign'){
 			self.log('proc', msg);
-			try{
-				var a = parseInt(msg.sub_timeout);
-				self.sub_timeout = (a + 5) * 1000;
-			}catch(e){}
-			if(self.ping_cb){
-				self.ping_cb(msg);
+			if(self.sign_cb){
+				self.sign_cb(msg);
 			}
 			return;
 		}
 		if(msg.type == 'noop'){
+			self.last_sub_time = (new Date()).getTime();
 			if(msg.seq == self.noop_seq){
 				self.log('proc', msg);
 				if(self.noop_seq == 2147483647){
@@ -87,6 +106,7 @@ function iComet(cid, callback){
 			return;
 		}
 		if(msg.type == 'data'){
+			self.last_sub_time = (new Date()).getTime();
 			if(msg.seq != self.data_seq){
 				if(msg.seq == 0){
 					self.log('server restarted');
@@ -137,10 +157,10 @@ function iComet(cid, callback){
 		}
 	}
 	
-	self.ping = function(callback){
-		self.log('ping icomet server...');
-		self.ping_cb = callback;
-		var url = self.ping_url + '&_=' + new Date().getTime();
+	self.sign = function(callback){
+		self.log('sign in icomet server...');
+		self.sign_cb = callback;
+		var url = self.sign_url + '&_=' + new Date().getTime();
 		var script = '\<script class="' + self.cb + '\" src="' + url + '">\<\/script>';
 		$('body').append(script);
 	}
@@ -151,6 +171,7 @@ function iComet(cid, callback){
 		self.last_sub_time = (new Date()).getTime();
 		$('script.' + self.cb).remove();
 		var url = self.sub_url
+			 + '&cid=' + self.cid
 			 + '&seq=' + self.data_seq
 			 + '&noop=' + self.noop_seq
 			 + '&_=' + new Date().getTime();
@@ -162,21 +183,26 @@ function iComet(cid, callback){
 	
 	self.start = function(){
 		self.stopped = false;
-		self.ping(function(){
-			if(self.ping_timer){
-				clearTimeout(self.ping_timer);
-				self.ping_timer = null;
+		self.sign(function(msg){
+			if(self.sign_timer){
+				clearTimeout(self.sign_timer);
+				self.sign_timer = null;
 			}else{
 				return;
 			}
 			if(!self.stopped){
-				self.log('start sub, timeout=' + self.sub_timeout + 'ms');
+				self.cid = msg.cid;
+				try{
+					var a = parseInt(msg.sub_timeout) || 0;
+					self.sub_timeout = (a + 10) * 1000;
+				}catch(e){}
+				self.log('start sub ' + self.cid + ', timeout=' + self.sub_timeout + 'ms');
 				self._start_timeout_checker();
 				self_sub();
 			}
 		});
-		if(!self.ping_timer){
-			self.ping_timer = setInterval(self.start, 3000 + Math.random() * 2000);
+		if(!self.sign_timer){
+			self.sign_timer = setInterval(self.start, 3000 + Math.random() * 2000);
 		}
 		if(self.timer){
 			clearTimeout(self.timer);
@@ -192,9 +218,9 @@ function iComet(cid, callback){
 			clearTimeout(self.timer);
 			self.timer = null;
 		}
-		if(self.ping_timer){
-			clearTimeout(self.ping_timer);
-			self.ping_timer = null;
+		if(self.sign_timer){
+			clearTimeout(self.sign_timer);
+			self.sign_timer = null;
 		}
 	}
 	

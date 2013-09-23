@@ -9,9 +9,9 @@ A C1000K comet server built with libevent
 make
 ./icomet
 
-curl -v "http://127.0.0.1:8100/sub?id=12"
+curl -v "http://127.0.0.1:8100/sub?cid=12"
 # open another terminal
-curl -v "http://127.0.0.1:8000/pub?id=12&content=hi"
+curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 ```
 
 ## Memory Usage

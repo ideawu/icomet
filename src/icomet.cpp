@@ -116,18 +116,18 @@ int main(int argc, char **argv){
 	parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
 
 	{
-		// /pub?id=123&content=hi
+		// /pub?cid=123&content=hi
 		// content must be json encoded string without leading and trailing quotes
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?id=123&[expires=60], wait 60 seconds before any sub
+		// /sign?cid=123&[expires=60], wait 60 seconds before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
-		// /close?id=123
+		// /close?cid=123
 		// 获取通道的信息
-		// /stat?id=123
+		// /stat?cid=123
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?id=123,234
+		// /check?cid=123,234
 		
 		struct evhttp_bound_socket *handle;
 		handle = evhttp_bind_socket_with_handle(admin_http, admin_ip.c_str(), admin_port);
@@ -176,7 +176,7 @@ int main(int argc, char **argv){
 	}
 
 	{
-		// /sub?cb=jsonp&id=123&token=&[seq=123]
+		// /sub?cid=123&cb=jsonp&token=&seq=123&noop=123
 		evhttp_set_cb(front_http, "/sub", sub_handler, NULL);
 		// /ping?cb=jsonp
 		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);

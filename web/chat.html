@@ -40,13 +40,15 @@
 <script>
 function login(){
 	var cid = $('*[name=channel_id]').val();
-	
-	var comet = new iComet(cid, function(msg){
-		var div = $('#recv_chat_window');
-		div.append('<b>recv:</b> ' + msg.content.replace(/\n/g, '<br/>') + '<br/>');
-		div.scrollTop(div[0].scrollHeight);
+	var comet = new iComet({
+		sign_url: 'http://127.0.0.1:8000/sign?cid=' + cid,
+		sub_url: 'http://127.0.0.1:8100/sub',
+		sub_callback: function(msg){
+			var div = $('#recv_chat_window');
+			div.append('<b>recv:</b> ' + msg.content.replace(/\n/g, '<br/>') + '<br/>');
+			div.scrollTop(div[0].scrollHeight);
+		}
 	});
-
 	$('#login_form').hide();
 	$('#chat_window').show();
 	$('#chat_window h3').html('Channel: ' + cid);
@@ -56,7 +58,7 @@ function send(){
 	var t = $('#chat_window textarea[name=content]');
 	
 	var data = {};
-	data.id = $('*[name=channel_id]').val();
+	data.cid = $('*[name=channel_id]').val();
 	data.content = t.val()
 		.replace(/\\/g, '\\\\')
 		.replace(/"/g, '\\"')

@@ -56,7 +56,7 @@ int Server::check_timeout(){
 		}
 
 		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
-			if(++sub->idle < SUB_MAX_IDLES){
+			if(++sub->idle <= SUB_MAX_IDLES){
 				continue;
 			}
 			evbuffer_add_printf(buf,
@@ -105,7 +105,7 @@ int Server::sub(struct evhttp_request *req){
 	const char *token = "";
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
-		if(strcmp(kv->key, "id") == 0){
+		if(strcmp(kv->key, "cid") == 0){
 			cid = atoi(kv->value);
 		}else if(strcmp(kv->key, "seq") == 0){
 			seq = atoi(kv->value);
@@ -257,7 +257,7 @@ int Server::pub(struct evhttp_request *req){
 	const char *content = "";
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
-		if(strcmp(kv->key, "id") == 0){
+		if(strcmp(kv->key, "cid") == 0){
 			cid = atoi(kv->value);
 		}else if(strcmp(kv->key, "content") == 0){
 			content = kv->value;
@@ -305,10 +305,13 @@ int Server::sign(struct evhttp_request *req){
 
 	int cid = -1;
 	int expires = 0;
+	const char *cb = NULL;
 	struct evkeyval *kv;
 	for(kv = params.tqh_first; kv; kv = kv->next.tqe_next){
-		if(strcmp(kv->key, "id") == 0){
+		if(strcmp(kv->key, "cid") == 0){
 			cid = atoi(kv->value);
+		}else if(strcmp(kv->key, "cb") == 0){
+			cb = kv->value;
 		}else if(strcmp(kv->key, "expires") == 0){
 			expires = atoi(kv->value);
 		}
@@ -347,11 +350,19 @@ int Server::sign(struct evhttp_request *req){
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf, "{cid: %d, seq: %d, token: \"%s\", expires: %d}\n",
+	if(cb){
+		evbuffer_add_printf(buf, "%s(", cb);
+	}
+	evbuffer_add_printf(buf,
+		"{type: \"sign\", cid: %d, seq: %d, token: \"%s\", expires: %d, sub_timeout: %d}\n",
 		channel->id,
 		channel->msg_seq_min(),
 		channel->token.c_str(),
-		expires);
+		expires,
+		SUB_IDLE_TIMEOUT);
+	if(cb){
+		evbuffer_add_printf(buf, ");\n");
+	}
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 
