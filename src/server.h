@@ -24,7 +24,10 @@ private:
 		Channel *head;
 		Channel *tail;
 	}channels;
+
+	int subscribers;
 	
+	Channel* get_channel(int cid);
 	void add_channel(Channel *channel);
 	void del_channel(Channel *channel);
 public:
@@ -38,13 +41,17 @@ public:
 	Server();
 	~Server();
 	
+	int check_timeout();
+	
 	int sub(struct evhttp_request *req);
 	int sub_end(Subscriber *sub);
 	int ping(struct evhttp_request *req);
 
 	int pub(struct evhttp_request *req);
 	int sign(struct evhttp_request *req);
-	int check_timeout();
+	int close(struct evhttp_request *req);
+	int info(struct evhttp_request *req);
+	int check(struct evhttp_request *req);
 };
 
 #endif

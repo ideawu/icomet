@@ -31,4 +31,4 @@ curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 1. Compile and start icomet server
 1. Drag and drop the file web/chat.html into one web browser
 1. Drag and drop the file web/chat.html into another different web browser
-1. Start instant chatting!
+1. Start chatting!

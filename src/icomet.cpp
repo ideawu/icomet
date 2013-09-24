@@ -84,6 +84,39 @@ void sign_handler(struct evhttp_request *req, void *arg){
 	serv->sign(req);
 }
 
+void close_handler(struct evhttp_request *req, void *arg){
+	bool pass = ip_filter->check_pass(req->remote_host);
+	if(!pass){
+		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
+		evhttp_add_header(req->output_headers, "Connection", "Close");
+		evhttp_send_reply(req, 403, "Forbidden", NULL);
+		return;
+	}
+	serv->close(req);
+}
+
+void info_handler(struct evhttp_request *req, void *arg){
+	bool pass = ip_filter->check_pass(req->remote_host);
+	if(!pass){
+		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
+		evhttp_add_header(req->output_headers, "Connection", "Close");
+		evhttp_send_reply(req, 403, "Forbidden", NULL);
+		return;
+	}
+	serv->info(req);
+}
+
+void check_handler(struct evhttp_request *req, void *arg){
+	bool pass = ip_filter->check_pass(req->remote_host);
+	if(!pass){
+		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
+		evhttp_add_header(req->output_headers, "Connection", "Close");
+		evhttp_send_reply(req, 403, "Forbidden", NULL);
+		return;
+	}
+	serv->check(req);
+}
+
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
 	rand();
 	serv->check_timeout();
@@ -102,33 +135,33 @@ int main(int argc, char **argv){
 
 	log_info("starting icomet %s...", ICOMET_VERSION);
 	
-	// TODO:
+	serv = new Server();
+	ip_filter = new IpFilter();
+	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
 	ServerConfig::max_messages_per_channel = conf->get_num("front.max_messages_per_channel");
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
-
-	std::string admin_ip;
-	std::string front_ip;
-	int admin_port = 0;
-	int front_port = 0;
-	
-	parse_ip_port(conf->get_str("admin.listen"), &admin_ip, &admin_port);
-	parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
 
 	{
 		// /pub?cid=123&content=hi
 		// content must be json encoded string without leading and trailing quotes
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?cid=123&[expires=60], wait 60 seconds before any sub
+		// /sign?cid=123&[expires=60], wait 60 seconds to expire before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
 		// /close?cid=123
+		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
 		// 获取通道的信息
-		// /stat?cid=123
+		// /info?[cid=123], or TODO: /info?cid=1,2,3
+		evhttp_set_cb(admin_http, "/info", info_handler, NULL);
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?cid=123,234
+		// /check?cid=123, or TODO: /info?cid=1,2,3
+		evhttp_set_cb(admin_http, "/check", check_handler, NULL);
 		
+		std::string admin_ip;
+		int admin_port = 0;
+		parse_ip_port(conf->get_str("admin.listen"), &admin_ip, &admin_port);
 		struct evhttp_bound_socket *handle;
 		handle = evhttp_bind_socket_with_handle(admin_http, admin_ip.c_str(), admin_port);
 		if(!handle){
@@ -142,7 +175,6 @@ int main(int argc, char **argv){
 		// TODO: modify libevent, add evhttp_set_accept_cb()
 	}
 
-	ip_filter = new IpFilter();
 	// init admin ip_filter
 	{
 		Config *cc = (Config *)conf->get("admin");
@@ -181,6 +213,9 @@ int main(int argc, char **argv){
 		// /ping?cb=jsonp
 		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);
 
+		std::string front_ip;
+		int front_port = 0;
+		parse_ip_port(conf->get_str("front.listen"), &front_ip, &front_port);
 		for(int i=0; i<MAX_BIND_PORTS; i++){
 			int port = front_port + i;
 			
@@ -195,19 +230,17 @@ int main(int argc, char **argv){
 			struct evconnlistener *listener = evhttp_bound_socket_get_listener(handle);
 			evconnlistener_set_error_cb(listener, accept_error_cb);
 		}
-	}
-	std::string auth = conf->get_str("front.auth");
-	
-	log_info("    auth %s", auth.c_str());
-	log_info("    max_channels %d", ServerConfig::max_channels);
-	log_info("    max_messages_per_channel %d", ServerConfig::max_messages_per_channel);
-	log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
-	
-	serv = new Server();
-	if(auth == "token"){
-		serv->auth = Server::AUTH_TOKEN;
-	}
 
+		std::string auth = conf->get_str("front.auth");
+		log_info("    auth %s", auth.c_str());
+		log_info("    max_channels %d", ServerConfig::max_channels);
+		log_info("    max_messages_per_channel %d", ServerConfig::max_messages_per_channel);
+		log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
+		if(auth == "token"){
+			serv->auth = Server::AUTH_TOKEN;
+		}
+	}
+	
 	log_info("icomet started");
 	event_base_dispatch(evbase);
 	log_info("icomet exit");
