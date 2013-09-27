@@ -51,6 +51,7 @@ public:
 	int id;
 	int idle;
 	int seq_next;
+	std::string obj;
 	std::string token;
 	std::vector<std::string> msg_list;
 	

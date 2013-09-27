@@ -2,6 +2,8 @@
 #define ICOMET_SERVER_H
 
 #include <vector>
+#include <map>
+#include <list>
 #include <evhttp.h>
 #include <event2/http.h>
 #include "channel.h"
@@ -16,8 +18,11 @@
 
 class Server{
 private:
-	std::vector<Channel> channel_slots;
 	ObjPool<Subscriber> sub_pool;
+	std::vector<Channel> channel_slots;
+	// mapping obj to channel
+	std::map<std::string, Channel *> obj_channels;
+	std::list<Channel *> free_channels;
 	
 	struct{
 		int size;
@@ -28,6 +33,7 @@ private:
 	int subscribers;
 	
 	Channel* get_channel(int cid);
+	Channel* get_channel_by_obj(const std::string &obj);
 	void add_channel(Channel *channel);
 	void del_channel(Channel *channel);
 public:

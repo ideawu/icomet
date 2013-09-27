@@ -99,7 +99,7 @@ function iComet(config){
 				}
 				// if the channel is empty, it is probably empty next time,
 				// so pause some seconds before sub again
-				setTimeout(self_sub, 2000 + Math.random() * 3000);
+				setTimeout(self_sub, 1000 + Math.random() * 2000);
 			}else{
 				self.log('ignore exceeded connections');
 			}

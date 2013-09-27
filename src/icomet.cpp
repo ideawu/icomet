@@ -135,28 +135,30 @@ int main(int argc, char **argv){
 
 	log_info("starting icomet %s...", ICOMET_VERSION);
 	
-	serv = new Server();
-	ip_filter = new IpFilter();
-	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
 	ServerConfig::max_messages_per_channel = conf->get_num("front.max_messages_per_channel");
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
+	
+	serv = new Server();
+	ip_filter = new IpFilter();
 
 	{
 		// /pub?cid=123&content=hi
-		// content must be json encoded string without leading and trailing quotes
+		// /pub?obj=abc&content=hi
+		// content must be json encoded string without leading quote and trailing quote
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?cid=123&[expires=60], wait 60 seconds to expire before any sub
+		// /sign?obj=abc&[expires=60]
+		// wait 60 seconds to expire before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
-		// /close?cid=123
+		// /close?obj=abc
 		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
 		// 获取通道的信息
-		// /info?[cid=123], or TODO: /info?cid=1,2,3
+		// /info?[obj=abc], or TODO: /info?obj=a,b,c
 		evhttp_set_cb(admin_http, "/info", info_handler, NULL);
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?cid=123, or TODO: /info?cid=1,2,3
+		// /check?obj=abc, or TODO: /check?obj=a,b,c
 		evhttp_set_cb(admin_http, "/check", check_handler, NULL);
 		
 		std::string admin_ip;
