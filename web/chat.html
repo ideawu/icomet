@@ -103,6 +103,7 @@ function join(){
 	$('#nickname').html(nickname);
 	
 	var url = location.href;
+	url = url.replace(/channel=[^&]*/, '').replace(/\?$/, '');
 	url += (url.indexOf('?') == -1)? '?' : '&';
 	url += 'channel=' + obj;
 	var html = '';

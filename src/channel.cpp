@@ -19,17 +19,16 @@ void Channel::reset(){
 	idle = -1;
 	token.clear();
 	msg_list.clear();
-	list_reset(subs);
 }
 
 void Channel::add_subscriber(Subscriber *sub){
 	sub->channel = this;
-	list_add(subs, sub);
+	subs.push_back(sub);
 }
 
 void Channel::del_subscriber(Subscriber *sub){
 	sub->channel = NULL;
-	list_del(subs, sub);
+	subs.remove(sub);
 }
 
 void Channel::create_token(){

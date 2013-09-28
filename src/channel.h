@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <evhttp.h>
+#include "util/list.h"
 
 #define CHANNEL_MSG_LIST_SIZE	10
 
@@ -42,17 +43,21 @@ public:
 	Channel *prev;
 	Channel *next;
 
-	struct{
-		int size;
-		Subscriber *head;
-		Subscriber *tail;
-	}subs;
+	LinkedList<Subscriber *> subs;
 
 	int id;
 	int idle;
 	int seq_next;
 	std::string obj;
 	std::string token;
+	
+	// TODO:
+	/*
+	struct Message{
+		int time;
+		std::string content;
+	};
+	*/
 	std::vector<std::string> msg_list;
 	
 	Channel();

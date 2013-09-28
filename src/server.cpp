@@ -35,7 +35,6 @@ Server::Server(){
 		channel->id = i;
 		free_channels.push_back(channel);
 	}
-	list_reset(channels);
 }
 
 Server::~Server(){
@@ -57,18 +56,26 @@ Channel* Server::get_channel_by_obj(const std::string &obj){
 	return it->second;
 }
 
-void Server::add_channel(Channel *channel){
+Channel* Server::alloc_channel(Channel *channel){
+	if(channel == NULL){
+		channel = free_channels.head;
+	}
 	assert(channel->subs.size == 0);
+	log_debug("alloc channel: %d", channel->id);
+	// first remove, then push_back, do not mistake the order
+	free_channels.remove(channel);
+	used_channels.push_back(channel);
 	obj_channels[channel->obj] = channel;
-	list_add(channels, channel);
+	return channel;
 }
 
-void Server::del_channel(Channel *channel){
+void Server::delete_channel(Channel *channel){
 	assert(channel->subs.size == 0);
-	log_debug("free channel: %d", channel->id);
-	obj_channels.erase(channel->obj);
-	list_del(channels, channel);
+	log_debug("delete channel: %d", channel->id);
+	// first remove, then push_back, do not mistake the order
+	used_channels.remove(channel);
 	free_channels.push_back(channel);
+	obj_channels.erase(channel->obj);
 	channel->reset();
 }
 
@@ -82,12 +89,10 @@ static void on_connection_close(struct evhttp_connection *evcon, void *arg){
 int Server::check_timeout(){
 	//log_debug("<");
 	struct evbuffer *buf = evbuffer_new();
-	for(Channel *channel = channels.head; channel; channel=channel->next){
+	for(Channel *channel = used_channels.head; channel; channel=channel->next){
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
-				log_trace("delete channel: %d", channel->id);
-				this->del_channel(channel);
-				channel->reset();
+				this->delete_channel(channel);
 			}
 			continue;
 		}
@@ -123,7 +128,7 @@ int Server::sub_end(Subscriber *sub){
 	subscribers --;
 	log_debug("%s:%d sub_end %d, channels: %d, subs: %d",
 		sub->req->remote_host, sub->req->remote_port,
-		channel->id, channels.size, channel->subs.size);
+		channel->id, used_channels.size, channel->subs.size);
 	sub_pool.free(sub);
 	return 0;
 }
@@ -187,8 +192,7 @@ int Server::sub(struct evhttp_request *req){
 		return 0;
 	}
 	if(channel->idle == -1){
-		log_trace("new channel: %d", channel->id);
-		this->add_channel(channel);
+		this->alloc_channel(channel);
 	}
 	channel->idle = ServerConfig::channel_idles;
 
@@ -235,7 +239,7 @@ int Server::sub(struct evhttp_request *req){
 	subscribers ++;
 	log_debug("%s:%d sub %d, channels: %d, subs: %d",
 		sub->req->remote_host, sub->req->remote_port,
-		channel->id, channels.size, channel->subs.size);
+		channel->id, used_channels.size, channel->subs.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
@@ -300,7 +304,6 @@ int Server::pub(struct evhttp_request *req){
 
 	// push to subscribers
 	channel->send("data", content);
-
 	return 0;
 }
 
@@ -317,11 +320,9 @@ int Server::sign(struct evhttp_request *req){
 	
 	Channel *channel = this->get_channel_by_obj(obj);
 	if(!channel && !free_channels.empty()){
-		channel = free_channels.front();
-		free_channels.pop_front();
+		channel = free_channels.head;
 		channel->obj = obj;
-		log_debug("alloc channel: %d", channel->id);
-		this->add_channel(channel);
+		this->alloc_channel(channel);
 	}	
 	if(!channel){
 		struct evbuffer *buf = evbuffer_new();
@@ -392,8 +393,7 @@ int Server::close(struct evhttp_request *req){
 	// push to subscribers
 	if(channel->idle != -1){
 		channel->send("close", content);
-		log_trace("delete channel: %d", channel->id);
-		this->del_channel(channel);
+		this->delete_channel(channel);
 	}
 
 	return 0;
@@ -415,7 +415,7 @@ int Server::info(struct evhttp_request *req){
 	}else{
 		evbuffer_add_printf(buf,
 			"{channels: %d, subscribers: %d}\n",
-			channels.size,
+			used_channels.size,
 			subscribers);
 	}
 	evhttp_send_reply(req, 200, "OK", buf);

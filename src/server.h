@@ -7,6 +7,7 @@
 #include <evhttp.h>
 #include <event2/http.h>
 #include "channel.h"
+#include "util/list.h"
 #include "util/objpool.h"
 
 #define DEFAULT_JSONP_CALLBACK	"icomet_cb"
@@ -18,20 +19,16 @@ private:
 	std::vector<Channel> channel_slots;
 	// mapping obj to channel
 	std::map<std::string, Channel *> obj_channels;
-	std::list<Channel *> free_channels;
 	
-	struct{
-		int size;
-		Channel *head;
-		Channel *tail;
-	}channels;
+	LinkedList<Channel *> used_channels;
+	LinkedList<Channel *> free_channels;
 
 	int subscribers;
 	
 	Channel* get_channel(int cid);
 	Channel* get_channel_by_obj(const std::string &obj);
-	void add_channel(Channel *channel);
-	void del_channel(Channel *channel);
+	Channel* alloc_channel(Channel *channel=NULL);
+	void delete_channel(Channel *channel);
 public:
 	enum{
 		AUTH_NONE = 0,

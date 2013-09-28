@@ -1,41 +1,57 @@
 #ifndef UTIL_LIST_H
 #define UTIL_LIST_H
 
-#define list_reset(L)\
-	do{\
-		L.size = 0;\
-		L.head = NULL;\
-		L.tail = NULL;\
-	}while(0)
+template <class T>
+class LinkedList{
+public:
+	int size;
+	T head;
+	T tail;
+	
+	LinkedList(){
+		size = 0;
+		head = NULL;
+		tail = NULL;
+	}
+	
+	bool empty() const{
+		return size == 0;
+	}
+	
+	void remove(T t){
+		this->size --;
+		if(t->prev){
+			t->prev->next = t->next;
+		}
+		if(t->next){
+			t->next->prev = t->prev;
+		}
+		if(this->head == t){
+			this->head = t->next;
+		}
+		if(this->tail == t){
+			this->tail = t->prev;
+		}
+	}
+	
+	T pop_front(){
+		T t = this->head;
+		this->remove(t);
+		return t;
+	}
 
-#define list_add(L, i)\
-	do{\
-		(L).size ++;\
-		(i)->prev = (L).tail;\
-		(i)->next = NULL;\
-		if((L).tail){\
-			(L).tail->next = (i);\
-		}else{\
-			(L).head = (i);\
-		}\
-		(L).tail = (i);\
-	}while(0)
+	void push_back(T t){
+		this->size ++;
+		t->prev = this->tail;
+		t->next = NULL;
+		if(this->tail){
+			this->tail->next = t;
+		}else{ // both head and tail is empty
+			this->head = t;
+		}
+		this->tail = t;
+	}
+};
 
-#define list_del(L, i)\
-	do{\
-		(L).size --;\
-		if((i)->prev){\
-			(i)->prev->next = (i)->next;\
-		}\
-		if((i)->next){\
-			(i)->next->prev = (i)->prev;\
-		}\
-		if((L).head == (i)){\
-			(L).head = (i)->next;\
-		}\
-		if((L).tail == (i)){\
-			(L).tail = (i)->prev;\
-		}\
-	}while(0)
 
 #endif
