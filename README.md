@@ -5,7 +5,8 @@ A C1000K comet server built with libevent
 
 ## Supported OS and Browsers
 
-|| Browser || OS ||
+| Browser | OS  |
+| --------| --- |
 | Safari | iPhone, Mac |
 | Firefox | Windows, Mac |
 | Chrome | Windows, Mac |
