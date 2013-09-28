@@ -65,8 +65,11 @@ void Server::add_channel(Channel *channel){
 
 void Server::del_channel(Channel *channel){
 	assert(channel->subs.size == 0);
+	log_debug("free channel: %d", channel->id);
 	obj_channels.erase(channel->obj);
 	list_del(channels, channel);
+	free_channels.push_back(channel);
+	channel->reset();
 }
 
 static void on_connection_close(struct evhttp_connection *evcon, void *arg){
@@ -131,7 +134,7 @@ int Server::sub(struct evhttp_request *req){
 		return 0;
 	}
 	bufferevent_enable(evhttp_connection_get_bufferevent(req->evcon), EV_READ);
-	
+
 	HttpQuery query(req);
 	int cid = query.get_int("cid", -1);
 	int seq = query.get_int("seq", 0);
@@ -318,6 +321,7 @@ int Server::sign(struct evhttp_request *req){
 		free_channels.pop_front();
 		channel->obj = obj;
 		log_debug("alloc channel: %d", channel->id);
+		this->add_channel(channel);
 	}	
 	if(!channel){
 		struct evbuffer *buf = evbuffer_new();
@@ -333,7 +337,6 @@ int Server::sign(struct evhttp_request *req){
 	if(channel->idle == -1){
 		log_debug("sign obj:%s, cid:%d, t:%s, expires:%d",
 			obj.c_str(), channel->id, channel->token.c_str(), expires);
-		this->add_channel(channel);
 	}else{
 		log_debug("re-sign obj:%s, cid:%d, t:%s, expires:%d",
 			obj.c_str(), channel->id, channel->token.c_str(), expires);
@@ -391,7 +394,6 @@ int Server::close(struct evhttp_request *req){
 		channel->send("close", content);
 		log_trace("delete channel: %d", channel->id);
 		this->del_channel(channel);
-		channel->reset();
 	}
 
 	return 0;
