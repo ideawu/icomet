@@ -32,3 +32,10 @@ curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 1. Drag and drop the file web/chat.html into one web browser
 1. Drag and drop the file web/chat.html into another different web browser
 1. Start chatting!
+
+
+## Live demo
+
+http://www.ideawu.com/icomet/chat.html
+
+
