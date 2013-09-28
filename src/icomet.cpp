@@ -12,6 +12,7 @@
 #include "util/file.h"
 #include "util/config.h"
 #include "util/strings.h"
+#include "util/daemon.h"
 #include "channel.h"
 #include "server.h"
 #include "server_config.h"
@@ -20,9 +21,13 @@
 // for testing
 #define MAX_BIND_PORTS 1
 
-int ServerConfig::max_channels					= 1000;
-int ServerConfig::max_messages_per_channel		= 10;
-int ServerConfig::max_subscribers_per_channel	= 2;
+int ServerConfig::max_channels					= 0;
+int ServerConfig::max_subscribers_per_channel	= 0;
+int ServerConfig::polling_timeout				= 0;
+int ServerConfig::polling_idles					= 0;
+int ServerConfig::channel_buffer_size			= 0;
+int ServerConfig::channel_timeout				= 0;
+int ServerConfig::channel_idles					= 0;
 
 Server *serv = NULL;
 Config *conf = NULL;
@@ -35,6 +40,9 @@ struct event *sigint_event = NULL;
 struct event *sigterm_event = NULL;
 
 void init(int argc, char **argv);
+void write_pidfile();
+void check_pidfile();
+void remove_pidfile();
 
 void welcome(){
 	printf("icomet server %s\n", ICOMET_VERSION);
@@ -44,7 +52,7 @@ void welcome(){
 
 void usage(int argc, char **argv){
 	printf("Usage:\n");
-	printf("    %s /path/to/icomet.conf\n", argv[0]);
+	printf("    %s [-d] /path/to/icomet.conf\n", argv[0]);
 	//printf("Options:\n");
 	//printf("    -d    run as daemon\n");
 }
@@ -130,15 +138,15 @@ int main(int argc, char **argv){
 	welcome();
 	init(argc, argv);
 	
-	// TODO:
-	set_log_level(Logger::LEVEL_MAX);
-
-	log_info("starting icomet %s...", ICOMET_VERSION);
-	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
-	ServerConfig::max_messages_per_channel = conf->get_num("front.max_messages_per_channel");
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
+	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
+	ServerConfig::channel_buffer_size = conf->get_num("front.channel_buffer_size");
+	ServerConfig::channel_timeout = 1.5 * ServerConfig::polling_timeout;
 	
+	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
+	ServerConfig::channel_idles = ServerConfig::channel_timeout / CHANNEL_CHECK_INTERVAL;
+		
 	serv = new Server();
 	ip_filter = new IpFilter();
 
@@ -236,13 +244,15 @@ int main(int argc, char **argv){
 		std::string auth = conf->get_str("front.auth");
 		log_info("    auth %s", auth.c_str());
 		log_info("    max_channels %d", ServerConfig::max_channels);
-		log_info("    max_messages_per_channel %d", ServerConfig::max_messages_per_channel);
 		log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
+		log_info("    channel_buffer_size %d", ServerConfig::channel_buffer_size);
+		log_info("    polling_timeout %d", ServerConfig::polling_timeout);
 		if(auth == "token"){
 			serv->auth = Server::AUTH_TOKEN;
 		}
 	}
 	
+	write_pidfile();
 	log_info("icomet started");
 	event_base_dispatch(evbase);
 	log_info("icomet exit");
@@ -257,6 +267,7 @@ int main(int argc, char **argv){
 	delete conf;
 	delete ip_filter;
 
+	remove_pidfile();
 	return 0;
 }
 
@@ -309,6 +320,37 @@ void init(int argc, char **argv){
 		}
 	}
 
+
+	std::string log_output;
+	int log_rotate_size = 0;
+	{ // logger
+		int log_level = Logger::get_level(conf->get_str("logger.level"));
+		log_rotate_size = conf->get_num("logger.rotate.size");
+		if(log_rotate_size < 1024 * 1024){
+			log_rotate_size = 1024 * 1024;
+		}
+		log_output = conf->get_str("logger.output");
+		if(log_output == ""){
+			log_output = "stdout";
+		}
+		if(log_open(log_output.c_str(), log_level, true, log_rotate_size) == -1){
+			fprintf(stderr, "error open log file: %s", log_output.c_str());
+			exit(0);
+		}
+	}
+
+	check_pidfile();
+	if(is_daemon){
+		daemonize();
+	}
+
+	log_info("starting icomet %s...", ICOMET_VERSION);
+	log_info("loading config file: %s", conf_file);
+	log_info("log_level       : %s", conf->get_str("logger.level"));
+	log_info("log_output      : %s", log_output.c_str());
+	log_info("log_rotate_size : %d", log_rotate_size);
+
+
 	evbase = event_base_new();
 	if(!evbase){
 		fprintf(stderr, "create evbase error!\n");
@@ -344,5 +386,41 @@ void init(int argc, char **argv){
 			fprintf(stderr, "Could not create/add a timer event!\n");
 			exit(0);
 		}
+	}
+}
+
+void write_pidfile(){
+	const char *pidfile = conf->get_str("pidfile");
+	if(strlen(pidfile)){
+		FILE *fp = fopen(pidfile, "w");
+		if(!fp){
+			log_error("Failed to open pidfile '%s': %s", pidfile, strerror(errno));
+			exit(0);
+		}
+		char buf[128];
+		pid_t pid = getpid();
+		snprintf(buf, sizeof(buf), "%d", pid);
+		log_info("pidfile: %s, pid: %d", pidfile, pid);
+		fwrite(buf, 1, strlen(buf), fp);
+		fclose(fp);
+	}
+}
+
+void check_pidfile(){
+	const char *pidfile = conf->get_str("pidfile");
+	if(strlen(pidfile)){
+		if(access(pidfile, F_OK) == 0){
+			fprintf(stderr, "Fatal error!\nPidfile %s already exists!\n"
+				"You must kill the process and then "
+				"remove this file before starting icomet.\n", pidfile);
+			exit(0);
+		}
+	}
+}
+
+void remove_pidfile(){
+	const char *pidfile = conf->get_str("pidfile");
+	if(strlen(pidfile)){
+		remove(pidfile);
 	}
 }

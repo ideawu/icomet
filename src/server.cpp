@@ -88,12 +88,12 @@ int Server::check_timeout(){
 			}
 			continue;
 		}
-		if(channel->idle < CHANNEL_MAX_IDLES){
-			channel->idle = CHANNEL_MAX_IDLES;
+		if(channel->idle < ServerConfig::channel_idles){
+			channel->idle = ServerConfig::channel_idles;
 		}
 
 		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
-			if(++sub->idle <= SUB_MAX_IDLES){
+			if(++sub->idle <= ServerConfig::polling_idles){
 				continue;
 			}
 			evbuffer_add_printf(buf,
@@ -117,11 +117,11 @@ int Server::check_timeout(){
 int Server::sub_end(Subscriber *sub){
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
-	sub_pool.free(sub);
 	subscribers --;
-	
-	log_trace("channels: %d, ch: %d, del sub, subs: %d",
-		channels.size, channel->id, channel->subs.size);
+	log_debug("%s:%d sub_end %d, channels: %d, subs: %d",
+		sub->req->remote_host, sub->req->remote_port,
+		channel->id, channels.size, channel->subs.size);
+	sub_pool.free(sub);
 	return 0;
 }
 
@@ -187,7 +187,7 @@ int Server::sub(struct evhttp_request *req){
 		log_trace("new channel: %d", channel->id);
 		this->add_channel(channel);
 	}
-	channel->idle = CHANNEL_MAX_IDLES;
+	channel->idle = ServerConfig::channel_idles;
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
@@ -230,8 +230,9 @@ int Server::sub(struct evhttp_request *req){
 	
 	channel->add_subscriber(sub);
 	subscribers ++;
-	log_trace("channels: %d, ch: %d, add sub, subs: %d",
-		channels.size, channel->id, channel->subs.size);
+	log_debug("%s:%d sub %d, channels: %d, subs: %d",
+		sub->req->remote_host, sub->req->remote_port,
+		channel->id, channels.size, channel->subs.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
@@ -249,7 +250,7 @@ int Server::ping(struct evhttp_request *req){
 	evbuffer_add_printf(buf,
 		"%s({type: \"ping\", sub_timeout: %d});\n",
 		cb,
-		SUB_IDLE_TIMEOUT);
+		ServerConfig::polling_timeout);
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
 	evbuffer_free(buf);
 	return 0;
@@ -308,7 +309,7 @@ int Server::sign(struct evhttp_request *req){
 	std::string obj = query.get_str("obj", "");
 	
 	if(expires <= 0){
-		expires = CHANNEL_IDLE_TIMEOUT;
+		expires = ServerConfig::channel_timeout;
 	}
 	
 	Channel *channel = this->get_channel_by_obj(obj);
@@ -350,7 +351,7 @@ int Server::sign(struct evhttp_request *req){
 		channel->msg_seq_min(),
 		channel->token.c_str(),
 		expires,
-		SUB_IDLE_TIMEOUT);
+		ServerConfig::channel_timeout);
 	if(cb){
 		evbuffer_add(buf, ");\n", 3);
 	}else{

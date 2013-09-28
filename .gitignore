@@ -1,5 +1,7 @@
 version.h
+log.txt
 config.h
+*.pid
 *.o
 *.lo
 *.a
