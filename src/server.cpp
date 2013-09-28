@@ -271,6 +271,7 @@ int Server::pub(struct evhttp_request *req){
 	
 	HttpQuery query(req);
 	int cid = query.get_int("cid", -1);
+	const char *cb = query.get_str("cb", NULL);
 	std::string obj = query.get_str("obj", "");
 	const char *content = query.get_str("content", "");
 	
@@ -296,9 +297,17 @@ int Server::pub(struct evhttp_request *req){
 	log_debug("ch: %d, subs: %d, pub content: %s", channel->id, channel->subs.size, content);
 		
 	// response to publisher
-	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
+	if(cb){
+		evbuffer_add_printf(buf, "%s(", cb);
+	}
+	evbuffer_add_printf(buf, "{type: \"ok\"}");
+	if(cb){
+		evbuffer_add(buf, ");\n", 3);
+	}else{
+		evbuffer_add(buf, "\n", 1);
+	}
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
 

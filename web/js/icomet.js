@@ -239,22 +239,24 @@ function iComet(config){
 	}
 	
 	self.log = function(){
-		var v = arguments;
-		var p = 'icomet[' + self.id + ']';
-		var t = new Date().toTimeString().substr(0, 8);
-		if(v.length == 1){
-			console.log(t, p, v[0]);
-		}else if(v.length == 2){
-			console.log(t, p, v[0], v[1]);
-		}else if(v.length == 3){
-			console.log(t, p, v[0], v[1], v[2]);
-		}else if(v.length == 4){
-			console.log(t, p, v[0], v[1], v[2], v[3]);
-		}else if(v.length == 5){
-			console.log(t, p, v[0], v[1], v[2], v[3], v[4]);
-		}else{
-			console.log(t, p, v);
-		}
+		try{
+			var v = arguments;
+			var p = 'icomet[' + self.id + ']';
+			var t = new Date().toTimeString().substr(0, 8);
+			if(v.length == 1){
+				console.log(t, p, v[0]);
+			}else if(v.length == 2){
+				console.log(t, p, v[0], v[1]);
+			}else if(v.length == 3){
+				console.log(t, p, v[0], v[1], v[2]);
+			}else if(v.length == 4){
+				console.log(t, p, v[0], v[1], v[2], v[3]);
+			}else if(v.length == 5){
+				console.log(t, p, v[0], v[1], v[2], v[3], v[4]);
+			}else{
+				console.log(t, p, v);
+			}
+		}catch(e){}
 	}
 
 	self.start();

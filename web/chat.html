@@ -60,6 +60,13 @@ var uid = 'u' + (Math.random() + '').replace('.', '').substr(1, 6);
 var nickname = '';
 var app_host = '127.0.0.1:8000';
 var icomet_host = '127.0.0.1:8100';
+var n = location.href.match(/http[s]?:\/\/([^\/]*)\//);
+if(n && n.length == 2){
+	var ps = n[1].split(':');
+	app_host = ps[0] + ':8000';
+	icomet_host = ps[0] + ':8100';
+}
+
 
 function join(){
 	nickname = $.trim($('*[name=nickname]').val());
@@ -135,10 +142,12 @@ function send(){
 	data.content = JSON.stringify(data.content);
 	data.content = data.content.substr(1, data.content.length - 2);
 
-	$.get('http://' + app_host + '/pub', data, function(){
-		//
+	$('button.send').attr('disabled', 'disabled');
+	var pub_url = 'http://' + app_host + '/pub?cb=?';
+	$.getJSON(pub_url, data, function(){
+		t.val('');
+		$('button.send').removeAttr('disabled');
 	});
-	t.val('');
 }
 
 $(function(){

@@ -255,7 +255,6 @@ int main(int argc, char **argv){
 	write_pidfile();
 	log_info("icomet started");
 	event_base_dispatch(evbase);
-	log_info("icomet exit");
 
 	event_free(timer_event);
 	event_free(sigint_event);
@@ -268,6 +267,8 @@ int main(int argc, char **argv){
 	delete ip_filter;
 
 	remove_pidfile();
+	
+	log_info("icomet exit");
 	return 0;
 }
 
