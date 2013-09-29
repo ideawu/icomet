@@ -72,9 +72,6 @@ cd "$DIR"
 
 rm -f config.h
 echo "#ifndef ICOMET_CONFIG_H" >> config.h
-echo "#ifndef __STDC_FORMAT_MACROS" >> config.h
-echo "#define __STDC_FORMAT_MACROS" >> config.h
-echo "#endif" >> config.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> config.h
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
@@ -93,6 +90,7 @@ echo C=$C >> config.mk
 echo CC=$CC >> config.mk
 echo CFLAGS := >> config.mk
 echo CFLAGS += -g -O2 -Wall -Wno-sign-compare >> config.mk
+echo CFLAGS += -D__STDC_FORMAT_MACROS >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH\" >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> config.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> config.mk
