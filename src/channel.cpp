@@ -54,7 +54,9 @@ void Channel::create_token(){
 
 void Channel::send(const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
-	for(Subscriber *sub = this->subs.head; sub; sub=sub->next){
+	Subscriber *sub_next = NULL;
+	for(Subscriber *sub = this->subs.head; sub; sub=sub_next){
+		sub_next = sub->next;
 		evbuffer_add_printf(buf,
 			"%s({type: \"%s\", cid: \"%d\", seq: \"%d\", content: \"%s\"});\n",
 			sub->callback.c_str(),

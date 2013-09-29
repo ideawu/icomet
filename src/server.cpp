@@ -28,6 +28,7 @@ public:
 Server::Server(){
 	this->auth = AUTH_NONE;
 	subscribers = 0;
+	sub_pool.pre_alloc(1024);
 
 	channel_slots.resize(ServerConfig::max_channels);
 	for(int i=0; i<channel_slots.size(); i++){
