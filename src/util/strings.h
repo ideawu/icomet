@@ -164,7 +164,7 @@ std::string double_to_str(double v){
 
 static inline
 int parse_ip_port(const char *addr, std::string *ip, int *port){
-	char *sep = strchr(addr, ':');
+	char *sep = (char *)strchr(addr, ':');
 	if(!sep){
 		return -1;
 	}
