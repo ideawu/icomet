@@ -89,7 +89,10 @@ static void on_connection_close(struct evhttp_connection *evcon, void *arg){
 int Server::check_timeout(){
 	//log_debug("<");
 	struct evbuffer *buf = evbuffer_new();
-	for(Channel *channel = used_channels.head; channel; channel=channel->next){
+	Channel *channel_next = NULL;
+	for(Channel *channel = used_channels.head; channel; channel=channel_next){
+		channel_next = channel->next;
+		
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
 				this->delete_channel(channel);
@@ -100,7 +103,10 @@ int Server::check_timeout(){
 			channel->idle = ServerConfig::channel_idles;
 		}
 
-		for(Subscriber *sub = channel->subs.head; sub; sub=sub->next){
+		Subscriber *sub_next = NULL;
+		for(Subscriber *sub = channel->subs.head; sub; sub=sub_next){
+			sub_next = sub->next;
+			
 			if(++sub->idle <= ServerConfig::polling_idles){
 				continue;
 			}
