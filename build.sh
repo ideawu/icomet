@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 BASE_DIR=`pwd`
 TARGET_OS=`uname -s`
 JEMALLOC_PATH="$BASE_DIR/deps/jemalloc-3.4.0"
