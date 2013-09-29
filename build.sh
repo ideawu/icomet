@@ -72,6 +72,9 @@ cd "$DIR"
 
 rm -f config.h
 echo "#ifndef ICOMET_CONFIG_H" >> config.h
+echo "#ifndef __STDC_FORMAT_MACROS" >> config.h
+echo "#define __STDC_FORMAT_MACROS" >> config.h
+echo "#endif" >> config.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> config.h
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
