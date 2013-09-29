@@ -3,10 +3,10 @@ icomet
 
 A C1000K comet server built with libevent
 
-## Supported OS and Browsers
+## Supported Platforms and Browsers
 
-| Browser | OS  |
-| --------| --- |
+| Browser | Platform |
+| --------| -------- |
 | Safari | iPhone, Mac |
 | Firefox | Windows, Mac |
 | Chrome | Windows, Mac |
