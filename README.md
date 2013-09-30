@@ -7,10 +7,10 @@ A C1000K comet server built with libevent
 
 | Browser | Platform |
 | --------| -------- |
-| Safari | iPhone, Mac |
+| Safari  | iOS(iPhone, iPod, iPad), Mac |
 | Firefox | Windows, Mac |
-| Chrome | Windows, Mac |
-| IE6 | Windows |
+| Chrome  | Windows, Mac |
+| IE6, IE8 | Windows |
 
 
 ## Usage

@@ -161,8 +161,11 @@ function iComet(config){
 		self.log('sign in icomet server...');
 		self.sign_cb = callback;
 		var url = self.sign_url + '&_=' + new Date().getTime();
-		var script = '\<script class="' + self.cb + '\" src="' + url + '">\<\/script>';
-		$('body').append(script);
+		$.ajax({
+			url: url,
+			dataType: "jsonp",
+			jsonpCallback: "cb"
+		});
 	}
 
 	var self_sub = function(){
@@ -175,14 +178,22 @@ function iComet(config){
 			 + '&seq=' + self.data_seq
 			 + '&noop=' + self.noop_seq
 			 + '&_=' + new Date().getTime();
-		var script = '\<script class="' + self.cb + '\" src="' + url + '">\<\/script>';
-		setTimeout(function(){
-			$('body').append(script);
-		}, 0);
+		$.ajax({
+			url: url,
+			dataType: "jsonp",
+			jsonpCallback: "cb"
+		});
 	}
 	
 	self.start = function(){
 		self.stopped = false;
+		if(!self.sign_timer){
+			self.sign_timer = setInterval(self.start, 3000 + Math.random() * 2000);
+		}
+		if(self.timer){
+			clearTimeout(self.timer);
+			self.timer = null;
+		}
 		self.sign(function(msg){
 			if(self.sign_timer){
 				clearTimeout(self.sign_timer);
@@ -201,13 +212,6 @@ function iComet(config){
 				self_sub();
 			}
 		});
-		if(!self.sign_timer){
-			self.sign_timer = setInterval(self.start, 3000 + Math.random() * 2000);
-		}
-		if(self.timer){
-			clearTimeout(self.timer);
-			self.timer = null;
-		}
 	}
 
 	self.stop = function(){
