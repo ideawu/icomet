@@ -23,6 +23,7 @@ function iComet(config){
 	self.stopped = true;
 	self.last_sub_time = 0;
 	self.need_fast_reconnect = true;
+	self.token = '';
 
 	self.data_seq = 0;
 	self.noop_seq = 0;
@@ -177,6 +178,7 @@ function iComet(config){
 			 + '&cid=' + self.cid
 			 + '&seq=' + self.data_seq
 			 + '&noop=' + self.noop_seq
+			 + '&token=' + self.token
 			 + '&_=' + new Date().getTime();
 		$.ajax({
 			url: url,
@@ -203,6 +205,7 @@ function iComet(config){
 			}
 			if(!self.stopped){
 				self.cid = msg.cid;
+				self.token = msg.token;
 				try{
 					var a = parseInt(msg.sub_timeout) || 0;
 					self.sub_timeout = (a + 10) * 1000;
