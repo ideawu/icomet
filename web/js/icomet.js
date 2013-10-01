@@ -79,7 +79,7 @@ function iComet(config){
 			return;
 		}
 		if(msg.type == '429'){
-			// too many connections
+			alert('too many connections');
 			self.log('resp', msg);
 			setTimeout(self_sub, 5000 + Math.random() * 5000);
 			return;

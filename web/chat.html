@@ -175,9 +175,12 @@ $(function(){
 		</tr>
 		<tr>
 			<td>Channel</td>
-			<td><input type="text" name="obj" size="28" value="abc" /></td>
+			<td>
+				<input type="text" name="obj" size="28" value="abc" />
+			</td>
 		</tr>
 	</table>
+	<p><a href="#" onclick="$('*[name=obj]').val('public'); return false;">Join the public channel with others</a></p>
 	<button onclick="join()">&nbsp;Join&nbsp;</button>
 </div>
 
