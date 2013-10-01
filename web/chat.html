@@ -80,7 +80,7 @@ function join(){
 	var comet = new iComet({
 		sign_url: 'http://' + app_host + '/sign?obj=' + obj,
 		sub_url: 'http://' + icomet_host + '/sub',
-		sub_callback: function(msg){
+		callback: function(msg){
 			var msg = JSON.parse(msg.content);
 			var content = msg.content;
 			content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');

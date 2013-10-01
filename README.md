@@ -24,6 +24,19 @@ curl -v "http://127.0.0.1:8100/sub?cid=12"
 curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 ```
 
+### JavaScript Library Usage
+
+```javascript
+var comet = new iComet({
+    sign_url: 'http://' + app_host + '/sign?obj=' + obj,
+    sub_url: 'http://' + icomet_host + '/sub',
+    callback: function(msg){
+        // on server push
+        alert(msg.content);
+    }
+});
+```
+
 ## Memory Usage
 
 | Connections | VIRT | RES |

@@ -6,7 +6,7 @@ config = {
 	// sub_url link directly to icomet server
 	sub_url: 'http://...',
 	// be called when receive a msg
-	sub_callback: function(msg){}
+	callback: function(msg){}
 };
 */
 function iComet(config){
@@ -30,7 +30,7 @@ function iComet(config){
 	self.sign_cb = null;
 	
 	self.cid = config.cid;
-	self.sub_cb = config.sub_callback;
+	self.sub_cb = config.callback || config.sub_callback;
 	if(config.sub_url.indexOf('?') == -1){
 		self.sub_url = config.sub_url + '?';
 	}else{
@@ -69,11 +69,13 @@ function iComet(config){
 		if(msg.type == '404'){
 			self.log('resp', msg);
 			// TODO channel id error!
+			alert('channel not exists!');
 			return;
 		}
 		if(msg.type == '401'){
 			// TODO token error!
 			self.log('resp', msg);
+			alert('token error!');
 			return;
 		}
 		if(msg.type == '429'){
