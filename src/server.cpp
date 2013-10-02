@@ -48,10 +48,10 @@ Channel* Server::get_channel(int cid){
 	return &channel_slots[cid];
 }
 
-Channel* Server::get_channel_by_obj(const std::string &obj){
+Channel* Server::get_channel_by_name(const std::string &cname){
 	std::map<std::string, Channel *>::iterator it;
-	it = obj_channels.find(obj);
-	if(it == obj_channels.end()){
+	it = cname_channels.find(cname);
+	if(it == cname_channels.end()){
 		return NULL;
 	}
 	return it->second;
@@ -66,7 +66,7 @@ Channel* Server::alloc_channel(Channel *channel){
 	// first remove, then push_back, do not mistake the order
 	free_channels.remove(channel);
 	used_channels.push_back(channel);
-	obj_channels[channel->obj] = channel;
+	cname_channels[channel->name] = channel;
 	return channel;
 }
 
@@ -76,7 +76,7 @@ void Server::delete_channel(Channel *channel){
 	// first remove, then push_back, do not mistake the order
 	used_channels.remove(channel);
 	free_channels.push_back(channel);
-	obj_channels.erase(channel->obj);
+	cname_channels.erase(channel->name);
 	channel->reset();
 }
 
@@ -279,14 +279,14 @@ int Server::pub(struct evhttp_request *req){
 	HttpQuery query(req);
 	int cid = query.get_int("cid", -1);
 	const char *cb = query.get_str("cb", NULL);
-	std::string obj = query.get_str("obj", "");
+	std::string cname = query.get_str("cname", "");
 	const char *content = query.get_str("content", "");
 	
 	Channel *channel = NULL;
 	if(cid >= 0){
 		channel = this->get_channel(cid);
-	}else if(!obj.empty()){
-		channel = this->get_channel_by_obj(obj);
+	}else if(!cname.empty()){
+		channel = this->get_channel_by_name(cname);
 	}
 	if(!channel || channel->idle == -1){
 		struct evbuffer *buf = evbuffer_new();
@@ -294,8 +294,8 @@ int Server::pub(struct evhttp_request *req){
 			log_trace("channel[%d] not connected, pub content: %s", cid, content);
 			evbuffer_add_printf(buf, "channel[%d] not connected\n", cid);
 		}else{
-			log_trace("obj[%s] not connected, pub content: %s", obj.c_str(), content);
-			evbuffer_add_printf(buf, "obj[%s] not connected\n", obj.c_str());
+			log_trace("cname[%s] not connected, pub content: %s", cname.c_str(), content);
+			evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
 		}
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
@@ -328,21 +328,21 @@ int Server::sign(struct evhttp_request *req){
 	HttpQuery query(req);
 	int expires = query.get_int("expires", -1);
 	const char *cb = query.get_str("cb", NULL);
-	std::string obj = query.get_str("obj", "");
+	std::string cname = query.get_str("cname", "");
 	
 	if(expires <= 0){
 		expires = ServerConfig::channel_timeout;
 	}
 	
-	Channel *channel = this->get_channel_by_obj(obj);
+	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel && !free_channels.empty()){
 		channel = free_channels.head;
-		channel->obj = obj;
+		channel->name = cname;
 		this->alloc_channel(channel);
 	}	
 	if(!channel){
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "Invalid channel for obj: %s\n", obj.c_str());
+		evbuffer_add_printf(buf, "Invalid channel for cname: %s\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
@@ -352,11 +352,11 @@ int Server::sign(struct evhttp_request *req){
 		channel->create_token();
 	}
 	if(channel->idle == -1){
-		log_debug("sign obj:%s, cid:%d, t:%s, expires:%d",
-			obj.c_str(), channel->id, channel->token.c_str(), expires);
+		log_debug("sign cname:%s, cid:%d, t:%s, expires:%d",
+			cname.c_str(), channel->id, channel->token.c_str(), expires);
 	}else{
-		log_debug("re-sign obj:%s, cid:%d, t:%s, expires:%d",
-			obj.c_str(), channel->id, channel->token.c_str(), expires);
+		log_debug("re-sign cname:%s, cid:%d, t:%s, expires:%d",
+			cname.c_str(), channel->id, channel->token.c_str(), expires);
 	}
 	channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 
@@ -385,14 +385,14 @@ int Server::sign(struct evhttp_request *req){
 
 int Server::close(struct evhttp_request *req){
 	HttpQuery query(req);
-	std::string obj = query.get_str("obj", "");
+	std::string cname = query.get_str("cname", "");
 	const char *content = query.get_str("content", "");
 	
-	Channel *channel = this->get_channel_by_obj(obj);
+	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel){
-		log_warn("channel %s not found", obj.c_str());
+		log_warn("channel %s not found", cname.c_str());
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "obj[%s] not connected\n", obj.c_str());
+		evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
@@ -417,16 +417,16 @@ int Server::close(struct evhttp_request *req){
 
 int Server::info(struct evhttp_request *req){
 	HttpQuery query(req);
-	std::string obj = query.get_str("obj", "");
+	std::string cname = query.get_str("cname", "");
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	Channel *channel = this->get_channel_by_obj(obj);
-	if(!obj.empty()){
+	Channel *channel = this->get_channel_by_name(cname);
+	if(!cname.empty()){
 		int onlines = channel? channel->subs.size : 0;
 		evbuffer_add_printf(buf,
-			"{obj: \"%s\", subscribers: %d}\n",
-			obj.c_str(),
+			"{cname: \"%s\", subscribers: %d}\n",
+			cname.c_str(),
 			onlines);
 	}else{
 		evbuffer_add_printf(buf,
@@ -442,13 +442,13 @@ int Server::info(struct evhttp_request *req){
 
 int Server::check(struct evhttp_request *req){
 	HttpQuery query(req);
-	std::string obj = query.get_str("obj", "");
+	std::string cname = query.get_str("cname", "");
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	Channel *channel = this->get_channel_by_obj(obj);
+	Channel *channel = this->get_channel_by_name(cname);
 	if(channel && channel->idle != -1){
-		evbuffer_add_printf(buf, "{\"%s\": 1}\n", obj.c_str());
+		evbuffer_add_printf(buf, "{\"%s\": 1}\n", cname.c_str());
 	}else{
 		evbuffer_add_printf(buf, "{}\n");
 	}

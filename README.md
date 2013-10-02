@@ -28,8 +28,9 @@ curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 
 ```javascript
 var comet = new iComet({
-    sign_url: 'http://' + app_host + '/sign?obj=' + obj,
-    sub_url: 'http://' + icomet_host + '/sub',
+	channel: 'abc',
+    signUrl: 'http://127.0.0.1:8000/sign',
+    subUrl: 'http://'127.0.0.1:8100/sub',
     callback: function(msg){
         // on server push
         alert(msg.content);

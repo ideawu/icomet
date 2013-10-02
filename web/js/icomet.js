@@ -1,20 +1,27 @@
 /*
 config = {
+	channel: 'abc',
 	// sign_url usually link to a app server,
 	// and icomet.admin deny all, but allow app server
-	sign_url: 'http://...',
+	signUrl: 'http://...',
 	// sub_url link directly to icomet server
-	sub_url: 'http://...',
+	subUrl: 'http://...',
 	// be called when receive a msg
 	callback: function(msg){}
 };
 */
 function iComet(config){
+	var self = this;
 	if(iComet.id__ == undefined){
 		iComet.id__ = 0;
 	}
+	config.sub_url = config.sub_url || config.subUrl;
+	config.sign_url = config.sign_url || config.signUrl;
 	
-	var self = this;
+	self.cid = null;
+	self.cname = config.channel;
+	self.sub_cb = config.callback || config.sub_callback;
+	
 	self.id = iComet.id__++;
 	self.cb = 'icomet_cb_' + self.id;
 	self.sub_timeout = 60 * 1000;
@@ -29,8 +36,6 @@ function iComet(config){
 	self.noop_seq = 0;
 	self.sign_cb = null;
 	
-	self.cid = config.cid;
-	self.sub_cb = config.callback || config.sub_callback;
 	if(config.sub_url.indexOf('?') == -1){
 		self.sub_url = config.sub_url + '?';
 	}else{
@@ -42,7 +47,7 @@ function iComet(config){
 		self.sign_url = config.sign_url + '&';
 	}
 	self.sub_url += 'cb=' + self.cb;
-	self.sign_url += 'cb=' + self.cb;
+	self.sign_url += 'cb=' + self.cb + '&cname=' + self.cname;
 
 	window[self.cb] = function(msg, in_batch){
 		// batch repsonse

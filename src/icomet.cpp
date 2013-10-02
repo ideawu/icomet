@@ -53,8 +53,8 @@ void welcome(){
 void usage(int argc, char **argv){
 	printf("Usage:\n");
 	printf("    %s [-d] /path/to/icomet.conf\n", argv[0]);
-	//printf("Options:\n");
-	//printf("    -d    run as daemon\n");
+	printf("Options:\n");
+	printf("    -d    run as daemon\n");
 }
 
 void signal_cb(evutil_socket_t sig, short events, void *user_data){
@@ -62,7 +62,6 @@ void signal_cb(evutil_socket_t sig, short events, void *user_data){
 }
 
 void sub_handler(struct evhttp_request *req, void *arg){
-	rand();
 	serv->sub(req);
 }
 
@@ -70,60 +69,43 @@ void ping_handler(struct evhttp_request *req, void *arg){
 	serv->ping(req);
 }
 
+#define CHECK_AUTH() \
+	do{ \
+		bool pass = ip_filter->check_pass(req->remote_host); \
+		if(!pass){ \
+			log_info("admin deny %s:%d", req->remote_host, req->remote_port); \
+			evhttp_add_header(req->output_headers, "Connection", "Close"); \
+			evhttp_send_reply(req, 403, "Forbidden", NULL); \
+			return; \
+		} \
+	}while(0)
+
 void pub_handler(struct evhttp_request *req, void *arg){
-	bool pass = ip_filter->check_pass(req->remote_host);
-	if(!pass){
-		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
-		evhttp_add_header(req->output_headers, "Connection", "Close");
-		evhttp_send_reply(req, 403, "Forbidden", NULL);
-		return;
-	}
+	CHECK_AUTH();
 	serv->pub(req);
 }
 
 void sign_handler(struct evhttp_request *req, void *arg){
-	bool pass = ip_filter->check_pass(req->remote_host);
-	if(!pass){
-		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
-		evhttp_add_header(req->output_headers, "Connection", "Close");
-		evhttp_send_reply(req, 403, "Forbidden", NULL);
-		return;
-	}
+	CHECK_AUTH();
 	serv->sign(req);
 }
 
 void close_handler(struct evhttp_request *req, void *arg){
-	bool pass = ip_filter->check_pass(req->remote_host);
-	if(!pass){
-		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
-		evhttp_add_header(req->output_headers, "Connection", "Close");
-		evhttp_send_reply(req, 403, "Forbidden", NULL);
-		return;
-	}
+	CHECK_AUTH();
 	serv->close(req);
 }
 
 void info_handler(struct evhttp_request *req, void *arg){
-	bool pass = ip_filter->check_pass(req->remote_host);
-	if(!pass){
-		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
-		evhttp_add_header(req->output_headers, "Connection", "Close");
-		evhttp_send_reply(req, 403, "Forbidden", NULL);
-		return;
-	}
+	CHECK_AUTH();
 	serv->info(req);
 }
 
 void check_handler(struct evhttp_request *req, void *arg){
-	bool pass = ip_filter->check_pass(req->remote_host);
-	if(!pass){
-		log_info("admin deny %s:%d", req->remote_host, req->remote_port);
-		evhttp_add_header(req->output_headers, "Connection", "Close");
-		evhttp_send_reply(req, 403, "Forbidden", NULL);
-		return;
-	}
+	CHECK_AUTH();
 	serv->check(req);
 }
+
+#undef CHECK_AUTH
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
 	rand();
@@ -152,21 +134,21 @@ int main(int argc, char **argv){
 
 	{
 		// /pub?cid=123&content=hi
-		// /pub?obj=abc&content=hi
+		// /pub?cname=abc&content=hi
 		// content must be json encoded string without leading quote and trailing quote
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?obj=abc&[expires=60]
+		// /sign?cname=abc&[expires=60]
 		// wait 60 seconds to expire before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
-		// /close?obj=abc
+		// /close?cname=abc
 		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
 		// 获取通道的信息
-		// /info?[obj=abc], or TODO: /info?obj=a,b,c
+		// /info?[cname=abc], or TODO: /info?cname=a,b,c
 		evhttp_set_cb(admin_http, "/info", info_handler, NULL);
 		// 判断通道是否处于被订阅状态(所有订阅者断开连接一定时间后, 通道才转为空闲状态)
-		// /check?obj=abc, or TODO: /check?obj=a,b,c
+		// /check?cname=abc, or TODO: /check?cname=a,b,c
 		evhttp_set_cb(admin_http, "/check", check_handler, NULL);
 		
 		std::string admin_ip;
@@ -335,7 +317,7 @@ void init(int argc, char **argv){
 			log_output = "stdout";
 		}
 		if(log_open(log_output.c_str(), log_level, true, log_rotate_size) == -1){
-			fprintf(stderr, "error open log file: %s", log_output.c_str());
+			fprintf(stderr, "error open log file: %s\n", log_output.c_str());
 			exit(0);
 		}
 	}
@@ -346,7 +328,7 @@ void init(int argc, char **argv){
 	}
 
 	log_info("starting icomet %s...", ICOMET_VERSION);
-	log_info("loading config file: %s", conf_file);
+	log_info("config file: %s", conf_file);
 	log_info("log_level       : %s", conf->get_str("logger.level"));
 	log_info("log_output      : %s", log_output.c_str());
 	log_info("log_rotate_size : %d", log_rotate_size);

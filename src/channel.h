@@ -48,7 +48,7 @@ public:
 	int id;
 	int idle;
 	int seq_next;
-	std::string obj;
+	std::string name;
 	std::string token;
 	
 	// TODO:

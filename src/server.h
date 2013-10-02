@@ -17,8 +17,8 @@ class Server{
 private:
 	ObjPool<Subscriber> sub_pool;
 	std::vector<Channel> channel_slots;
-	// mapping obj to channel
-	std::map<std::string, Channel *> obj_channels;
+	// mapping cname(channel_name) to channel
+	std::map<std::string, Channel *> cname_channels;
 	
 	LinkedList<Channel *> used_channels;
 	LinkedList<Channel *> free_channels;
@@ -26,7 +26,7 @@ private:
 	int subscribers;
 	
 	Channel* get_channel(int cid);
-	Channel* get_channel_by_obj(const std::string &obj);
+	Channel* get_channel_by_name(const std::string &name);
 	Channel* alloc_channel(Channel *channel=NULL);
 	void delete_channel(Channel *channel);
 public:
