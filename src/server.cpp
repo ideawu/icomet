@@ -204,6 +204,7 @@ int Server::sub(struct evhttp_request *req){
 	channel->idle = ServerConfig::channel_idles;
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	evhttp_add_header(req->output_headers, "Expires", "0");
 	

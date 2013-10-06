@@ -30,7 +30,7 @@ curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
 var comet = new iComet({
 	channel: 'abc',
     signUrl: 'http://127.0.0.1:8000/sign',
-    subUrl: 'http://'127.0.0.1:8100/sub',
+    subUrl: 'http://127.0.0.1:8100/sub',
     callback: function(msg){
         // on server push
         alert(msg.content);
