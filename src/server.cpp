@@ -296,7 +296,7 @@ int Server::pub(struct evhttp_request *req){
 		evbuffer_free(buf);
 		return 0;
 	}
-	log_debug("channel: %d, subs: %d, pub content: %s", channel->name.c_str(), channel->subs.size, content);
+	log_debug("channel: %s, subs: %d, pub content: %s", channel->name.c_str(), channel->subs.size, content);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
