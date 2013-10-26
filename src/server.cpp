@@ -57,25 +57,29 @@ Channel* Server::get_channel_by_name(const std::string &cname){
 	return it->second;
 }
 
-Channel* Server::alloc_channel(Channel *channel){
-	if(channel == NULL){
-		channel = free_channels.head;
+Channel* Server::new_channel(const std::string &cname){
+	if(free_channels.empty()){
+		return NULL;
 	}
+	Channel *channel = free_channels.head;
 	assert(channel->subs.size == 0);
-	log_debug("alloc channel: %d", channel->id);
 	// first remove, then push_back, do not mistake the order
 	free_channels.remove(channel);
 	used_channels.push_back(channel);
+
+	channel->name = cname;
 	cname_channels[channel->name] = channel;
+	log_debug("new channel: %d, name: %s", channel->id, channel->name.c_str());
 	return channel;
 }
 
-void Server::delete_channel(Channel *channel){
+void Server::free_channel(Channel *channel){
 	assert(channel->subs.size == 0);
-	log_debug("delete channel: %d", channel->id);
+	log_debug("free channel: %d, name: %s", channel->id, channel->name.c_str());
 	// first remove, then push_back, do not mistake the order
 	used_channels.remove(channel);
 	free_channels.push_back(channel);
+
 	cname_channels.erase(channel->name);
 	channel->reset();
 }
@@ -96,7 +100,7 @@ int Server::check_timeout(){
 		
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
-				this->delete_channel(channel);
+				this->free_channel(channel);
 			}
 			continue;
 		}
@@ -112,9 +116,9 @@ int Server::check_timeout(){
 				continue;
 			}
 			evbuffer_add_printf(buf,
-				"%s({type: \"noop\", cid: \"%d\", seq: \"%d\"});\n",
+				"%s({type: \"noop\", cname: \"%s\", seq: \"%d\"});\n",
 				sub->callback.c_str(),
-				channel->id,
+				channel->name.c_str(),
 				sub->noop_seq
 				);
 			evhttp_send_reply_chunk(sub->req, buf);
@@ -133,9 +137,10 @@ int Server::sub_end(Subscriber *sub){
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
 	subscribers --;
-	log_debug("%s:%d sub_end %d, channels: %d, subs: %d",
+	log_debug("%s:%d sub_end %s, subs: %d, channels: %d",
 		sub->req->remote_host, sub->req->remote_port,
-		channel->id, used_channels.size, channel->subs.size);
+		channel->name.c_str(), channel->subs.size,
+		used_channels.size);
 	sub_pool.free(sub);
 	return 0;
 }
@@ -145,61 +150,58 @@ int Server::sub(struct evhttp_request *req){
 		evhttp_send_reply(req, 405, "Method Not Allowed", NULL);
 		return 0;
 	}
-	bufferevent_enable(evhttp_connection_get_bufferevent(req->evcon), EV_READ);
+	bufferevent_enable(req->evcon->bufev, EV_READ);
 
 	HttpQuery query(req);
-	int cid = query.get_int("cid", -1);
 	int seq = query.get_int("seq", 0);
 	int noop = query.get_int("noop", 0);
 	const char *cb = query.get_str("cb", DEFAULT_JSONP_CALLBACK);
 	const char *token = query.get_str("token", "");
-	
-	Channel *channel = this->get_channel(cid);
-	if(!channel){
-		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf,
-			"%s({type: \"404\", cid: \"%d\", seq: \"0\", content: \"Not Found\"});\n",
-			cb,
-			cid);
-		evhttp_send_reply(req, HTTP_OK, "OK", buf);
-		evbuffer_free(buf);
-		return 0;
+	std::string cname = query.get_str("cname", "");
+
+	Channel *channel = this->get_channel_by_name(cname);
+	if(!channel && this->auth == AUTH_NONE){
+		channel = this->new_channel(cname);
+		if(!channel){
+			struct evbuffer *buf = evbuffer_new();
+			evbuffer_add_printf(buf, "too many channels\n");
+			evhttp_send_reply(req, 404, "Not Found", buf);
+			evbuffer_free(buf);
+			return 0;
+		}
 	}
-	if(this->auth == AUTH_TOKEN &&
-		(channel->idle == -1 || channel->token.empty() || channel->token != token))
-	{
-		log_debug("%s:%d, Token Error, cid: %d, token: %s",
+	if(!channel || (this->auth == AUTH_TOKEN && channel->token != token)){
+		log_debug("%s:%d, Token Error, cname: %s, token: %s",
 			req->remote_host,
 			req->remote_port,
-			cid,
+			cname.c_str(),
 			token
 			);
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf,
-			"%s({type: \"401\", cid: \"%d\", seq: \"0\", content: \"Token Error\"});\n",
+			"%s({type: \"401\", cname: \"%s\", seq: \"0\", content: \"Token Error\"});\n",
 			cb,
-			cid);
+			cname.c_str()
+			);
 		evhttp_send_reply(req, HTTP_OK, "OK", buf);
 		evbuffer_free(buf);
 		return 0;
 	}
 	if(channel->subs.size >= ServerConfig::max_subscribers_per_channel){
-		log_debug("%s:%d, Too Many Requests, cid: %d",
+		log_debug("%s:%d, Too Many Requests, cname: %s",
 			req->remote_host,
 			req->remote_port,
-			cid
+			cname.c_str()
 			);
 		struct evbuffer *buf = evbuffer_new();
 		evbuffer_add_printf(buf,
-			"%s({type: \"429\", cid: \"%d\", seq: \"0\", content: \"Too Many Requests\"});\n",
+			"%s({type: \"429\", cname: \"%s\", seq: \"0\", content: \"Too Many Requests\"});\n",
 			cb,
-			cid);
+			cname.c_str()
+			);
 		evhttp_send_reply(req, HTTP_OK, "OK", buf);
 		evbuffer_free(buf);
 		return 0;
-	}
-	if(channel->idle == -1){
-		this->alloc_channel(channel);
 	}
 	channel->idle = ServerConfig::channel_idles;
 
@@ -208,6 +210,7 @@ int Server::sub(struct evhttp_request *req){
 	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	evhttp_add_header(req->output_headers, "Expires", "0");
 	
+	// send buffered messages
 	if(!channel->msg_list.empty() && channel->seq_next != seq){
 		std::vector<std::string>::iterator it = channel->msg_list.end();
 		int msg_seq_min = channel->seq_next - channel->msg_list.size();
@@ -222,8 +225,8 @@ int Server::sub(struct evhttp_request *req){
 		for(/**/; it != channel->msg_list.end(); it++, seq++){
 			std::string &msg = *it;
 			evbuffer_add_printf(buf,
-				"{type: \"data\", cid: \"%d\", seq: \"%d\", content: \"%s\"}",
-				cid,
+				"{type: \"data\", cname: \"%s\", seq: \"%d\", content: \"%s\"}",
+				cname.c_str(),
 				seq,
 				msg.c_str());
 			if(seq != channel->seq_next - 1){
@@ -245,9 +248,10 @@ int Server::sub(struct evhttp_request *req){
 	
 	channel->add_subscriber(sub);
 	subscribers ++;
-	log_debug("%s:%d sub %d, channels: %d, subs: %d",
-		sub->req->remote_host, sub->req->remote_port,
-		channel->id, used_channels.size, channel->subs.size);
+	log_debug("%s:%d sub %s, subs: %d, channels: %d",
+		req->remote_host, req->remote_port,
+		channel->name.c_str(), channel->subs.size,
+		used_channels.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
@@ -278,31 +282,21 @@ int Server::pub(struct evhttp_request *req){
 	}
 	
 	HttpQuery query(req);
-	int cid = query.get_int("cid", -1);
 	const char *cb = query.get_str("cb", NULL);
 	std::string cname = query.get_str("cname", "");
 	const char *content = query.get_str("content", "");
 	
 	Channel *channel = NULL;
-	if(cid >= 0){
-		channel = this->get_channel(cid);
-	}else if(!cname.empty()){
-		channel = this->get_channel_by_name(cname);
-	}
+	channel = this->get_channel_by_name(cname);
 	if(!channel || channel->idle == -1){
 		struct evbuffer *buf = evbuffer_new();
-		if(cid >= 0){
-			log_trace("channel[%d] not connected, pub content: %s", cid, content);
-			evbuffer_add_printf(buf, "channel[%d] not connected\n", cid);
-		}else{
-			log_trace("cname[%s] not connected, pub content: %s", cname.c_str(), content);
-			evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
-		}
+		log_trace("cname[%s] not connected, not pub content: %s", cname.c_str(), content);
+		evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
 	}
-	log_debug("ch: %d, subs: %d, pub content: %s", channel->id, channel->subs.size, content);
+	log_debug("channel: %d, subs: %d, pub content: %s", channel->name.c_str(), channel->subs.size, content);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
@@ -330,20 +324,18 @@ int Server::sign(struct evhttp_request *req){
 	int expires = query.get_int("expires", -1);
 	const char *cb = query.get_str("cb", NULL);
 	std::string cname = query.get_str("cname", "");
-	
+
 	if(expires <= 0){
 		expires = ServerConfig::channel_timeout;
 	}
 	
 	Channel *channel = this->get_channel_by_name(cname);
-	if(!channel && !free_channels.empty()){
-		channel = free_channels.head;
-		channel->name = cname;
-		this->alloc_channel(channel);
+	if(!channel){
+		channel = this->new_channel(cname);
 	}	
 	if(!channel){
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "Invalid channel for cname: %s\n", cname.c_str());
+		evbuffer_add_printf(buf, "too many channels\n");
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
@@ -353,10 +345,12 @@ int Server::sign(struct evhttp_request *req){
 		channel->create_token();
 	}
 	if(channel->idle == -1){
-		log_debug("sign cname:%s, cid:%d, t:%s, expires:%d",
+		log_debug("%s:%d sign cname:%s, cid:%d, t:%s, expires:%d",
+			req->remote_host, req->remote_port,
 			cname.c_str(), channel->id, channel->token.c_str(), expires);
 	}else{
-		log_debug("re-sign cname:%s, cid:%d, t:%s, expires:%d",
+		log_debug("%s:%d re-sign cname:%s, cid:%d, t:%s, expires:%d",
+			req->remote_host, req->remote_port,
 			cname.c_str(), channel->id, channel->token.c_str(), expires);
 	}
 	channel->idle = expires/CHANNEL_CHECK_INTERVAL;
@@ -367,8 +361,8 @@ int Server::sign(struct evhttp_request *req){
 		evbuffer_add_printf(buf, "%s(", cb);
 	}
 	evbuffer_add_printf(buf,
-		"{type: \"sign\", cid: %d, seq: %d, token: \"%s\", expires: %d, sub_timeout: %d}",
-		channel->id,
+		"{type: \"sign\", cname: \"%s\", seq: %d, token: \"%s\", expires: %d, sub_timeout: %d}",
+		channel->name.c_str(),
 		channel->msg_seq_min(),
 		channel->token.c_str(),
 		expires,
@@ -387,18 +381,17 @@ int Server::sign(struct evhttp_request *req){
 int Server::close(struct evhttp_request *req){
 	HttpQuery query(req);
 	std::string cname = query.get_str("cname", "");
-	const char *content = query.get_str("content", "");
-	
+
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel){
 		log_warn("channel %s not found", cname.c_str());
 		struct evbuffer *buf = evbuffer_new();
-		evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
+		evbuffer_add_printf(buf, "channel[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
 	}
-	log_debug("close ch: %d, subs: %d, content: %s", channel->id, channel->subs.size, content);
+	log_debug("close channel: %s, subs: %d", cname.c_str(), channel->subs.size);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
@@ -409,8 +402,8 @@ int Server::close(struct evhttp_request *req){
 
 	// push to subscribers
 	if(channel->idle != -1){
-		channel->send("close", content);
-		this->delete_channel(channel);
+		channel->send("close", "");
+		this->free_channel(channel);
 	}
 
 	return 0;
@@ -422,8 +415,9 @@ int Server::info(struct evhttp_request *req){
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
 	struct evbuffer *buf = evbuffer_new();
-	Channel *channel = this->get_channel_by_name(cname);
 	if(!cname.empty()){
+		Channel *channel = this->get_channel_by_name(cname);
+		// TODO: if(!channel) 404
 		int onlines = channel? channel->subs.size : 0;
 		evbuffer_add_printf(buf,
 			"{cname: \"%s\", subscribers: %d}\n",
@@ -458,3 +452,8 @@ int Server::check(struct evhttp_request *req){
 
 	return 0;
 }
+
+//struct evbuffer *output = bufferevent_get_output(req->evcon->bufev);
+//if(evbuffer_get_length(output) > MAX_OUTPUT_BUFFER){
+//  close_presence_subscriber();
+//}

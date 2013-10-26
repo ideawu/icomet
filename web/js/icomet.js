@@ -1,8 +1,9 @@
 /*
 config = {
 	channel: 'abc',
-	// sign_url usually link to a app server,
-	// and icomet.admin deny all, but allow app server
+	// [optional]
+	// sign_url usually link to a app server to get a token,
+	// if icomet do not need athentication, this parameter could be omitted.
 	signUrl: 'http://...',
 	// sub_url link directly to icomet server
 	subUrl: 'http://...',
@@ -10,6 +11,7 @@ config = {
 	callback: function(msg){}
 };
 */
+// TODO: let signUrl be optional 
 function iComet(config){
 	var self = this;
 	if(iComet.id__ == undefined){
@@ -18,13 +20,12 @@ function iComet(config){
 	config.sub_url = config.sub_url || config.subUrl;
 	config.sign_url = config.sign_url || config.signUrl;
 	
-	self.cid = null;
 	self.cname = config.channel;
 	self.sub_cb = config.callback || config.sub_callback;
+	self.sub_timeout = config.sub_timeout || (60 * 1000);
 	
 	self.id = iComet.id__++;
 	self.cb = 'icomet_cb_' + self.id;
-	self.sub_timeout = 60 * 1000;
 	self.timer = null;
 	self.sign_timer = null;
 	self.stopped = true;
@@ -41,13 +42,15 @@ function iComet(config){
 	}else{
 		self.sub_url = config.sub_url + '&';
 	}
-	if(config.sign_url.indexOf('?') == -1){
-		self.sign_url = config.sign_url + '?';
-	}else{
-		self.sign_url = config.sign_url + '&';
-	}
 	self.sub_url += 'cb=' + self.cb;
-	self.sign_url += 'cb=' + self.cb + '&cname=' + self.cname;
+	if(config.sign_url){
+		if(config.sign_url.indexOf('?') == -1){
+			self.sign_url = config.sign_url + '?';
+		}else{
+			self.sign_url = config.sign_url + '&';
+		}
+		self.sign_url += 'cb=' + self.cb + '&cname=' + self.cname;
+	}
 
 	window[self.cb] = function(msg, in_batch){
 		// batch repsonse
@@ -182,7 +185,7 @@ function iComet(config){
 		self.last_sub_time = (new Date()).getTime();
 		$('script.' + self.cb).remove();
 		var url = self.sub_url
-			 + '&cid=' + self.cid
+			 + '&cname=' + self.cname
 			 + '&seq=' + self.data_seq
 			 + '&noop=' + self.noop_seq
 			 + '&token=' + self.token
@@ -196,32 +199,38 @@ function iComet(config){
 	
 	self.start = function(){
 		self.stopped = false;
-		if(!self.sign_timer){
-			self.sign_timer = setInterval(self.start, 3000 + Math.random() * 2000);
-		}
 		if(self.timer){
 			clearTimeout(self.timer);
 			self.timer = null;
 		}
-		self.sign(function(msg){
-			if(self.sign_timer){
-				clearTimeout(self.sign_timer);
-				self.sign_timer = null;
-			}else{
-				return;
+		if(self.sign_url){
+			if(!self.sign_timer){
+				self.sign_timer = setInterval(self.start, 3000 + Math.random() * 2000);
 			}
-			if(!self.stopped){
-				self.cid = msg.cid;
-				self.token = msg.token;
-				try{
-					var a = parseInt(msg.sub_timeout) || 0;
-					self.sub_timeout = (a + 10) * 1000;
-				}catch(e){}
-				self.log('start sub ' + self.cid + ', timeout=' + self.sub_timeout + 'ms');
-				self._start_timeout_checker();
-				self_sub();
-			}
-		});
+			self.sign(function(msg){
+				if(self.sign_timer){
+					clearTimeout(self.sign_timer);
+					self.sign_timer = null;
+				}else{
+					return;
+				}
+				if(!self.stopped){
+					self.cname = msg.cname;
+					self.token = msg.token;
+					try{
+						var a = parseInt(msg.sub_timeout) || 0;
+						self.sub_timeout = (a + 10) * 1000;
+					}catch(e){}
+					self.log('start sub ' + self.cname + ', timeout=' + self.sub_timeout + 'ms');
+					self._start_timeout_checker();
+					self_sub();
+				}
+			});
+		}else{
+			self.log('start sub ' + self.cname + ', timeout=' + self.sub_timeout + 'ms');
+			self._start_timeout_checker();
+			self_sub();
+		}
 	}
 
 	self.stop = function(){

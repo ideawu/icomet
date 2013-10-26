@@ -46,6 +46,9 @@ public:
 	LinkedList<Subscriber *> subs;
 
 	int id;
+	// idle < 0: offline
+	// idle >= 0 && subs.empty(): away
+	// idle >= 0 && !subs.empty(): online
 	int idle;
 	int seq_next;
 	std::string name;

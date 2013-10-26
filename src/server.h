@@ -27,8 +27,8 @@ private:
 	
 	Channel* get_channel(int cid);
 	Channel* get_channel_by_name(const std::string &name);
-	Channel* alloc_channel(Channel *channel=NULL);
-	void delete_channel(Channel *channel);
+	Channel* new_channel(const std::string &cname);
+	void free_channel(Channel *channel);
 public:
 	enum{
 		AUTH_NONE = 0,

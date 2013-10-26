@@ -133,7 +133,6 @@ int main(int argc, char **argv){
 	ip_filter = new IpFilter();
 
 	{
-		// /pub?cid=123&content=hi
 		// /pub?cname=abc&content=hi
 		// content must be json encoded string without leading quote and trailing quote
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
@@ -151,6 +150,10 @@ int main(int argc, char **argv){
 		// /check?cname=abc, or TODO: /check?cname=a,b,c
 		evhttp_set_cb(admin_http, "/check", check_handler, NULL);
 		
+		// TODO: 订阅通道的状态变化信息, 如创建通道(第一个订阅者连接时), 关闭通道.
+		// 通过 endless chunk 返回.
+		//evhttp_set_cb(admin_http, "/sub_presence", presence_sub_handler, NULL);
+	
 		std::string admin_ip;
 		int admin_port = 0;
 		parse_ip_port(conf->get_str("admin.listen"), &admin_ip, &admin_port);
@@ -200,7 +203,7 @@ int main(int argc, char **argv){
 	}
 
 	{
-		// /sub?cid=123&cb=jsonp&token=&seq=123&noop=123
+		// TODO: sub?cname=abc&cb=jsonp&token=&seq=123&noop=123
 		evhttp_set_cb(front_http, "/sub", sub_handler, NULL);
 		// /ping?cb=jsonp
 		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);
@@ -237,6 +240,7 @@ int main(int argc, char **argv){
 	write_pidfile();
 	log_info("icomet started");
 	event_base_dispatch(evbase);
+	remove_pidfile();
 
 	event_free(timer_event);
 	event_free(sigint_event);
@@ -244,12 +248,11 @@ int main(int argc, char **argv){
 	evhttp_free(admin_http);
 	evhttp_free(front_http);
 	event_base_free(evbase);
+
 	delete serv;
 	delete conf;
 	delete ip_filter;
 
-	remove_pidfile();
-	
 	log_info("icomet exit");
 	return 0;
 }

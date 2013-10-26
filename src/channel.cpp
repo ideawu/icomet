@@ -58,10 +58,10 @@ void Channel::send(const char *type, const char *content){
 	for(Subscriber *sub = this->subs.head; sub; sub=sub_next){
 		sub_next = sub->next;
 		evbuffer_add_printf(buf,
-			"%s({type: \"%s\", cid: \"%d\", seq: \"%d\", content: \"%s\"});\n",
+			"%s({type: \"%s\", cname: \"%s\", seq: \"%d\", content: \"%s\"});\n",
 			sub->callback.c_str(),
 			type,
-			this->id,
+			this->name.c_str(),
 			this->seq_next,
 			content);
 		evhttp_send_reply_chunk(sub->req, buf);
