@@ -45,14 +45,14 @@ void check_pidfile();
 void remove_pidfile();
 
 void welcome(){
-	printf("icomet server %s\n", ICOMET_VERSION);
+	printf("icomet comet-server %s\n", ICOMET_VERSION);
 	printf("Copyright (c) 2013 ideawu.com\n");
 	printf("\n");
 }
 
 void usage(int argc, char **argv){
 	printf("Usage:\n");
-	printf("    %s [-d] /path/to/icomet.conf\n", argv[0]);
+	printf("    %s [-d] /path/to/comet.conf\n", argv[0]);
 	printf("Options:\n");
 	printf("    -d    run as daemon\n");
 }
