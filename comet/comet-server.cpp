@@ -13,10 +13,10 @@
 #include "util/config.h"
 #include "util/strings.h"
 #include "util/daemon.h"
+#include "util/ip_filter.h"
 #include "channel.h"
 #include "server.h"
 #include "server_config.h"
-#include "ip_filter.h"
 
 // for testing
 #define MAX_BIND_PORTS 1

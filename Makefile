@@ -4,13 +4,13 @@ include config.mk
 .PHONY: all tools clean
 
 all:
-	cd src/util; make
-	cd src; make
+	cd util; make
+	cd comet; make
 
 tools:
 	cd tools; make
 
 clean:
-	rm -f *.exe.stackdump icomet
-	cd src/util; make clean
-	cd src; make clean
+	rm -f *.exe.stackdump
+	cd util; make clean
+	cd comet; make clean

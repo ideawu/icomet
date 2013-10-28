@@ -11,7 +11,6 @@ config = {
 	callback: function(msg){}
 };
 */
-// TODO: let signUrl be optional 
 function iComet(config){
 	var self = this;
 	if(iComet.id__ == undefined){

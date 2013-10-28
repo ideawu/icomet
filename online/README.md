@@ -1,0 +1,1 @@
+Connect to comet servers, subscribe presence activities to build presence table.

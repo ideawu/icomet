@@ -1,6 +1,9 @@
 version.h
 log.txt
 config.h
+comet-server
+online-server
+*.dSYM
 *.pid
 *.o
 *.lo
@@ -13,7 +16,6 @@ tools/benchmark
 *.pyc
 *.swp
 *.exe
-comet
 icomet
 config.mk
 deps/libevent-2.0.21-stable/test
