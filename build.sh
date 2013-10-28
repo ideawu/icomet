@@ -44,15 +44,15 @@ if [[ $TARGET_OS == CYGWIN* ]]; then
 	echo "not using jemalloc on $TARGET_OS"
 else
 	echo ""
-	echo "building jemalloc..."
 	DIR=`pwd`
 	cd "$JEMALLOC_PATH"
 	if [ ! -f Makefile ]; then
+		echo "building jemalloc..."
 		./configure
 		make
+		echo "building jemalloc finished"
 	fi
 	cd "$DIR"
-	echo "building jemalloc finished"
 	echo ""
 fi
 
