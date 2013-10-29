@@ -1,1 +1,1 @@
-Periodically shipped most recent presence activities(online, offline) to presence servers
+Periodically ship most recent presence activities(presence, offline) to presence servers. But before this, send each presence activity(sub, offline) to presence subscribers at once.

@@ -152,7 +152,7 @@ int main(int argc, char **argv){
 		
 		// TODO: 订阅通道的状态变化信息, 如创建通道(第一个订阅者连接时), 关闭通道.
 		// 通过 endless chunk 返回.
-		//evhttp_set_cb(admin_http, "/sub_presence", presence_sub_handler, NULL);
+		//evhttp_set_cb(admin_http, "/sub_presence", sub_presence_handler, NULL);
 	
 		std::string admin_ip;
 		int admin_port = 0;
