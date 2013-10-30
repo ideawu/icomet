@@ -145,6 +145,11 @@ void Server::add_presence(PresenceType type, const std::string &cname){
 	LinkedList<PresenceSubscriber *>::Iterator it = psubs.iterator();
 	while(PresenceSubscriber *psub = it.next()){
 		evhttp_send_reply_chunk(psub->req, buf);
+
+		//struct evbuffer *output = bufferevent_get_output(req->evcon->bufev);
+		//if(evbuffer_get_length(output) > MAX_OUTPUT_BUFFER){
+		//  close_presence_subscriber();
+		//}
 	}
 	
 	evbuffer_free(buf);
@@ -164,9 +169,8 @@ int Server::psub(struct evhttp_request *req){
 	psub->req = req;
 	psub->serv = this;
 	psubs.push_back(psub);
+	log_debug("%s:%d psub, psubs: %d", req->remote_host, req->remote_port, psubs.size);
 
-	log_debug("accept presence subscriber from %s:%d",
-		req->remote_host, req->remote_port);
 	set_response_no_cache(req);
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_connection_set_closecb(req->evcon, on_psub_disconnect, psub);
@@ -502,8 +506,3 @@ int Server::check(struct evhttp_request *req){
 
 	return 0;
 }
-
-//struct evbuffer *output = bufferevent_get_output(req->evcon->bufev);
-//if(evbuffer_get_length(output) > MAX_OUTPUT_BUFFER){
-//  close_presence_subscriber();
-//}
