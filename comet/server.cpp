@@ -8,6 +8,14 @@
 #include "util/log.h"
 #include "util/list.h"
 
+
+static void set_response_no_cache(struct evhttp_request *req){
+	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
+	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
+	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+	evhttp_add_header(req->output_headers, "Expires", "0");
+}
+
 class HttpQuery{
 private:
 	struct evkeyvalq params;
@@ -70,12 +78,17 @@ Channel* Server::new_channel(const std::string &cname){
 	channel->name = cname;
 	cname_channels[channel->name] = channel;
 	log_debug("new channel: %d, name: %s", channel->id, channel->name.c_str());
+	
+	add_presence(PresenceOnline, channel->name);
+	
 	return channel;
 }
 
 void Server::free_channel(Channel *channel){
 	assert(channel->subs.size == 0);
 	log_debug("free channel: %d, name: %s", channel->id, channel->name.c_str());
+	add_presence(PresenceOffline, channel->name);
+
 	// first remove, then push_back, do not mistake the order
 	used_channels.remove(channel);
 	free_channels.push_back(channel);
@@ -84,20 +97,11 @@ void Server::free_channel(Channel *channel){
 	channel->reset();
 }
 
-static void on_connection_close(struct evhttp_connection *evcon, void *arg){
-	log_trace("connection closed");
-	Subscriber *sub = (Subscriber *)arg;
-	Server *serv = sub->serv;
-	serv->sub_end(sub);
-}
-
 int Server::check_timeout(){
 	//log_debug("<");
 	struct evbuffer *buf = evbuffer_new();
-	Channel *channel_next = NULL;
-	for(Channel *channel = used_channels.head; channel; channel=channel_next){
-		channel_next = channel->next;
-		
+	LinkedList<Channel *>::Iterator it = used_channels.iterator();
+	while(Channel *channel = it.next()){
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
 				this->free_channel(channel);
@@ -108,10 +112,8 @@ int Server::check_timeout(){
 			channel->idle = ServerConfig::channel_idles;
 		}
 
-		Subscriber *sub_next = NULL;
-		for(Subscriber *sub = channel->subs.head; sub; sub=sub_next){
-			sub_next = sub->next;
-			
+		LinkedList<Subscriber *>::Iterator it2 = channel->subs.iterator();
+		while(Subscriber *sub = it2.next()){
 			if(++sub->idle <= ServerConfig::polling_idles){
 				continue;
 			}
@@ -133,16 +135,56 @@ int Server::check_timeout(){
 	return 0;
 }
 
-int Server::sub_end(Subscriber *sub){
-	Channel *channel = sub->channel;
-	channel->del_subscriber(sub);
-	subscribers --;
-	log_debug("%s:%d sub_end %s, subs: %d, channels: %d",
-		sub->req->remote_host, sub->req->remote_port,
-		channel->name.c_str(), channel->subs.size,
-		used_channels.size);
-	sub_pool.free(sub);
+void Server::add_presence(PresenceType type, const std::string &cname){
+	if(psubs.empty()){
+		return;
+	}
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf, "%d %s\n", type, cname.c_str());
+
+	LinkedList<PresenceSubscriber *>::Iterator it = psubs.iterator();
+	while(PresenceSubscriber *psub = it.next()){
+		evhttp_send_reply_chunk(psub->req, buf);
+	}
+	
+	evbuffer_free(buf);
+}
+
+static void on_psub_disconnect(struct evhttp_connection *evcon, void *arg){
+	log_trace("presence subscriber disconnected");
+	PresenceSubscriber *psub = (PresenceSubscriber *)arg;
+	Server *serv = psub->serv;
+	serv->psub_end(psub);
+}
+
+int Server::psub(struct evhttp_request *req){
+	bufferevent_enable(req->evcon->bufev, EV_READ);
+
+	PresenceSubscriber *psub = new PresenceSubscriber();
+	psub->req = req;
+	psub->serv = this;
+	psubs.push_back(psub);
+
+	log_debug("accept presence subscriber from %s:%d",
+		req->remote_host, req->remote_port);
+	set_response_no_cache(req);
+	evhttp_send_reply_start(req, HTTP_OK, "OK");
+	evhttp_connection_set_closecb(req->evcon, on_psub_disconnect, psub);
 	return 0;
+}
+
+int Server::psub_end(PresenceSubscriber *psub){
+	struct evhttp_request *req = psub->req;
+	psubs.remove(psub);
+	log_debug("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
+	return 0;
+}
+
+static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
+	log_trace("subscriber disconnected");
+	Subscriber *sub = (Subscriber *)arg;
+	Server *serv = sub->serv;
+	serv->sub_end(sub);
 }
 
 int Server::sub(struct evhttp_request *req){
@@ -205,10 +247,7 @@ int Server::sub(struct evhttp_request *req){
 	}
 	channel->idle = ServerConfig::channel_idles;
 
-	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
-	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
-	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
-	evhttp_add_header(req->output_headers, "Expires", "0");
+	set_response_no_cache(req);
 	
 	// send buffered messages
 	if(!channel->msg_list.empty() && channel->seq_next != seq){
@@ -254,7 +293,20 @@ int Server::sub(struct evhttp_request *req){
 		used_channels.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
-	evhttp_connection_set_closecb(req->evcon, on_connection_close, sub);
+	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, sub);
+	return 0;
+}
+
+int Server::sub_end(Subscriber *sub){
+	struct evhttp_request *req = sub->req;
+	Channel *channel = sub->channel;
+	channel->del_subscriber(sub);
+	subscribers --;
+	log_debug("%s:%d sub_end %s, subs: %d, channels: %d",
+		req->remote_host, req->remote_port,
+		channel->name.c_str(), channel->subs.size,
+		used_channels.size);
+	sub_pool.free(sub);
 	return 0;
 }
 
@@ -262,9 +314,7 @@ int Server::ping(struct evhttp_request *req){
 	HttpQuery query(req);
 	const char *cb = query.get_str("cb", DEFAULT_JSONP_CALLBACK);
 
-	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
-	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
-	evhttp_add_header(req->output_headers, "Expires", "0");
+	set_response_no_cache(req);
 	struct evbuffer *buf = evbuffer_new();
 	evbuffer_add_printf(buf,
 		"%s({type: \"ping\", sub_timeout: %d});\n",

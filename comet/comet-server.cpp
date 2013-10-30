@@ -105,6 +105,11 @@ void check_handler(struct evhttp_request *req, void *arg){
 	serv->check(req);
 }
 
+void psub_handler(struct evhttp_request *req, void *arg){
+	CHECK_AUTH();
+	serv->psub(req);
+}
+
 #undef CHECK_AUTH
 
 void timer_cb(evutil_socket_t sig, short events, void *user_data){
@@ -150,9 +155,9 @@ int main(int argc, char **argv){
 		// /check?cname=abc, or TODO: /check?cname=a,b,c
 		evhttp_set_cb(admin_http, "/check", check_handler, NULL);
 		
-		// TODO: 订阅通道的状态变化信息, 如创建通道(第一个订阅者连接时), 关闭通道.
+		// 订阅通道的状态变化信息, 如创建通道(第一个订阅者连接时), 关闭通道.
 		// 通过 endless chunk 返回.
-		//evhttp_set_cb(admin_http, "/sub_presence", sub_presence_handler, NULL);
+		evhttp_set_cb(admin_http, "/psub", psub_handler, NULL);
 	
 		std::string admin_ip;
 		int admin_port = 0;

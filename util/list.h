@@ -4,6 +4,22 @@
 template <class T>
 class LinkedList{
 public:
+	class Iterator{
+	private:
+		T p;
+	public:
+		friend class LinkedList;
+		
+		T next(){
+			T ret = p;
+			if(p){
+				p = p->next;
+			}
+			return ret;
+		}
+	};
+	friend class Iterator;
+public:
 	int size;
 	T head;
 	T tail;
@@ -12,6 +28,12 @@ public:
 		size = 0;
 		head = NULL;
 		tail = NULL;
+	}
+	
+	Iterator iterator(){
+		Iterator it;
+		it.p = this->head;
+		return it;
 	}
 	
 	bool empty() const{
