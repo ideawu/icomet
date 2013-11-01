@@ -129,7 +129,7 @@ int main(int argc, char **argv){
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
 	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
 	ServerConfig::channel_buffer_size = conf->get_num("front.channel_buffer_size");
-	ServerConfig::channel_timeout = 1.5 * ServerConfig::polling_timeout;
+	ServerConfig::channel_timeout = 0.5 * ServerConfig::polling_timeout;
 	
 	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
 	ServerConfig::channel_idles = ServerConfig::channel_timeout / CHANNEL_CHECK_INTERVAL;

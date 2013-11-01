@@ -9,7 +9,7 @@
 #include "util/list.h"
 #include "util/objpool.h"
 #include "channel.h"
-#include "presence_subscriber.h"
+#include "presence.h"
 
 #define DEFAULT_JSONP_CALLBACK	"icomet_cb"
 #define CHANNEL_CHECK_INTERVAL	3
@@ -30,12 +30,6 @@ private:
 	Channel* get_channel_by_name(const std::string &name);
 	Channel* new_channel(const std::string &cname);
 	void free_channel(Channel *channel);
-	
-	enum PresenceType{
-		PresenceOnline  = 1,
-		PresenceOffline = 2,
-		PresenceStay    = 3
-	};
 
 	LinkedList<PresenceSubscriber *> psubs;
 
