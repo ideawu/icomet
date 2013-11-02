@@ -12,19 +12,19 @@ var EmoticonAdv = {
 		this.activeTextAreaId = txtid;
 		var buttonPosition = $("#" + btnid).offset();
 		$("#emoticonDropDown").css({
-			left: buttonPosition.left,
-			top : buttonPosition.top
+			left : buttonPosition.left - 3.5,
+			top : buttonPosition.top - 1.5
 		});
 
 		$("#emoticonDropDown").fadeIn();
 	},
 	hideDropDown : function () {
 		$("#emoticonDropDown").fadeOut();
-
 	},
 	insertSmiley : function (smiley) {
-		var x = document.getElementById(this.activeTextAreaId);
-		x.value = (x.value + " " + smiley + " ");
+		$("#emoticonDropDown").fadeOut();
+		var x = $("#" + this.activeTextAreaId);
+		x.val(x.val() + " " + smiley + " ").focus();
 	}
 };
 
@@ -39,29 +39,29 @@ $(function () {
 });
 
 var emoticons = [{
-		pattern : ["-_-"],
-		css : "background-position:0 -80px"
-	}, {
-		pattern : ["^_^;", "^^;"],
-		css : "background-position:0 -120px; width:18px"
-	}, {
-		pattern : ["%gt;_%lt;"],
-		css : "background-position:0 -140px"
-	}, {
-		pattern : ["%lt;_%lt;"],
-		css : "background-position:0 -200px"
-	}, {
-		pattern : ["%gt;_%gt;"],
-		css : "background-position:0 -220px"
-	}, {
-		pattern : ["x_x"],
-		css : "background-position:0 -240px"
+		pattern : ["-_-;"],
+		css : "background-position:0 -420px; width:18px"
 	}, {
 		pattern : ["._.;"],
 		css : "background-position:0 -380px; width:18px"
 	}, {
-		pattern : ["-_-;"],
-		css : "background-position:0 -420px; width:18px"
+		pattern : ["^_^;", "^^;"],
+		css : "background-position:0 -120px; width:18px"
+	}, {
+		pattern : ["-_-"],
+		css : "background-position:0 -80px"
+	}, {
+		pattern : ["&gt;_&lt;"],
+		css : "background-position:0 -140px"
+	}, {
+		pattern : ["&lt;_&lt;"],
+		css : "background-position:0 -200px"
+	}, {
+		pattern : ["&gt;_&gt;"],
+		css : "background-position:0 -220px"
+	}, {
+		pattern : ["x_x"],
+		css : "background-position:0 -240px"
 	}, {
 		pattern : ["\(o^_^o\)"],
 		css : "background-position:0 -440px"
@@ -75,7 +75,7 @@ var emoticons = [{
 		pattern : ["XD"],
 		css : "background-position:0 -540px"
 	}, {
-		pattern : ["\('%lt;"],
+		pattern : ["\('&lt;"],
 		css : "background-position:0 -560px"
 	}, {
 		pattern : ["B\)"],
@@ -96,10 +96,10 @@ var emoticons = [{
 		pattern : [":S", "=S"],
 		css : "background-position:0 -620px"
 	}, {
-		pattern : ["%gt;:\(", "%gt;:\["],
+		pattern : ["&gt;:\(", "&gt;:\["],
 		css : "background-position:0 -480px"
 	}, {
-		pattern : ["%gt;:\)", "%gt;:D"],
+		pattern : ["&gt;:\)", "&gt;:D"],
 		css : "background-position:0 -640px"
 	}, {
 		pattern : ["^_^", "^^"],
@@ -117,7 +117,7 @@ var emoticons = [{
 		pattern : ["\(^_^\)/", "o/"],
 		css : "background-position:0 -460px; width:19px"
 	}, {
-		pattern : ["%lt;\(^.^\)%gt;", "\(%gt;'.'\)%gt;", "\(%gt;^.^\)%gt;"],
+		pattern : ["&lt;\(^.^\)&gt;", "\(&gt;'.'\)&gt;", "\(&gt;^.^\)&gt;"],
 		css : "background-position:0 -400px; width:19px"
 	}, {
 		pattern : [":O", "=O", ":o", "=o"],
@@ -143,7 +143,7 @@ var emoticons = [{
 function toemote(content, format) {
 	for (var i = 0; i < emoticons.length; i++) {
 		for (var p = 0; p < emoticons[i].pattern.length; p++) {
-			content = content.replace(emoticons[i].pattern[p], format.replace("$$EMOTE$$", emoticons[i].css));
+			content = content.replace(new RegExp(emoticons[i].pattern[p].replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "g"), format.replace("$$EMOTE$$", emoticons[i].css));
 		}
 	}
 
@@ -224,7 +224,7 @@ if (n && n.length == 2) {
 	icomet_host = ps[0] + ':8100';
 }
 
-var testing = 1;
+var testing = 0;
 if (testing) {
 	// This is for test purpose only
 	var sign_url = 'http://' + admin_host + '/sign';
@@ -232,10 +232,49 @@ if (testing) {
 } else {
 	// In real world business, signUrl/pubUrl should link to an application server
 	// which will do neccessary authentication.
-	var sign_url = 'http://' + app_host + '/icomet/php/sign.php';
-	var pub_url = 'http://' + app_host + '/icomet/php/pub.php?cb=?';
+	var sign_url = 'http://' + app_host + '/web/php/sign.php';
+	var pub_url = 'http://' + app_host + '/web/php/pub.php?cb=?';
 }
 var sub_url = 'http://' + icomet_host + '/sub';
+
+var msgs = [];
+function addmsg(euid, name, content, is) {
+	is = is || false
+		var l = 'm' + (Math.random() + '').replace('.', '').substr(1, 6);
+	content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	content = content.replace(/\n/g, '<br/>');
+
+	var html = '';
+	content = toemote(content, "<span class=\"emoticon\" style=\"$$EMOTE$$\"></span>");
+	content = convertToLinks(content);
+
+	if (euid != uid || is) {
+		if (euid == uid) {
+			msgs[content] = l;
+		}
+		html += "<tr>";
+		html += '<td id="' + l + '"' + (euid == uid ? ' class="po sent"' : '') + ' width="20px">&nbsp;&nbsp;&nbsp;&nbsp;</td>';
+		switch ($.trim(content).split(" ")[0]) {
+		case "/me":
+			html += '<td class="chat_names">*</td>';
+			html += '<td class="chat_content"><span class="chat_names">' + name + '</span> ' + content.substr(4, content.length) + '</td>';
+			break;
+
+		default:
+			html += '<td class="chat_names">' + name + '</td>';
+			html += '<td class="chat_content">' + content + '</td>';
+			break;
+		}
+		html += "</tr>";
+
+		flashTitle('iComet Example Chat', '* People said stuff *');
+	} else {
+		$("#" + msgs[content]).removeClass("sent");
+	}
+
+	$('#chat').append(html);
+	$('#recv_chat_window').scrollTop($('#recv_chat_window')[0].scrollHeight);
+}
 
 function join() {
 	nickname = $.trim($('*[name=nickname]').val());
@@ -246,7 +285,6 @@ function join() {
 	}
 
 	var channel = $('*[name=channel]').val();
-	var prevuid = "0";
 	var comet = new iComet({
 			channel : channel,
 			signUrl : sign_url,
@@ -254,36 +292,7 @@ function join() {
 			callback : function (msg) {
 				var msg = JSON.parse(msg.content);
 				var content = msg.content;
-				content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-				content = content.replace(/\n\n+/g, '<br/><br/>');
-				content = content.replace(/\n/g, '<br/>');
-
-				var html = '';
-				content = toemote(content, "<span class=\"emoticon\" style=\"$$EMOTE$$\"></span>");
-				content = convertToLinks(content);
-
-				html += "<tr>";
-				switch ($.trim(content).split(" ")[0]) {
-				case "/me":
-					html += '<td class="chat_names">*</td>';
-					html += '<td class="chat_content"><span class="chat_names">' + msg.nickname + '</span> ' + content.substr(4, content.length) + '</td>';
-					break;
-
-				default:
-					html += '<td class="chat_names">' + msg.nickname + '</td>';
-					html += '<td class="chat_content">' + content + '</td>';
-					break;
-				}
-				html += "</tr>";
-
-				if ($.trim(content).split(" ")[0] != "/me") {
-					prevuid = msg.uid
-				} else {
-					prevuid = "0"
-				};
-				$('#chat').append(html);
-				$('#recv_chat_window').scrollTop($('#recv_chat_window')[0].scrollHeight);
-				flashTitle('iComet Example Chat', '* People said stuff *');
+				addmsg(msg.uid, msg.nickname, content, false);
 			}
 		});
 	$('#login_form').hide();
@@ -291,20 +300,18 @@ function join() {
 	$('#chat_window h3').html('Channel: ' + channel);
 	$('#nickname').html(nickname);
 
-	var url = location.href;
-	url = url.replace(/channel=[^&]*/, '').replace(/\?$/, '');
-	url += (url.indexOf('?') == -1) ? '?' : '&';
-	url += 'channel=' + channel;
+	var url = location.href.replace(/channel=[^&]*/, '').replace(/\?$/, '');
+	url += ((url.indexOf('?') == -1) ? '?' : '&') + 'channel=' + channel;
 	var html = '';
-	html += 'Tell your friend to join this chat with this link:<br/>';
-	html += url;
-	$('#share_this').html(html);
+	html += 'Tell your friend to join this chat with this link: ' + url;
+	$('#msgs').prepend(html);
 }
 
 function send() {
 	var t = $('#chat_window textarea[name=content]');
 	var content = $.trim(t.val());
 	content = htmlEntities(content);
+	t.val('');
 	if (content.length == 0) {
 		$('#errors').html('content empty!');
 		return false;
@@ -326,21 +333,19 @@ function send() {
 	data.content = JSON.stringify(data.content);
 	data.content = data.content.substr(1, data.content.length - 2);
 
-	$('button.send').attr('disabled', 'disabled');
-	$.getJSON(pub_url, data, function () {
-		t.val('');
-		$('button.send').removeAttr('disabled');
-	});
-}
-var w = window,
-    x = w.innerWidth,
-    y = w.innerHeight;
+	addmsg(uid, nickname, content, true);
 
+	$.getJSON(pub_url, data, function () {});
+}
+
+var w = window,
+x = w.innerWidth,
+y = w.innerHeight;
 $(function () {
 	$("#chat_window").width(x - 40);
 	$("#chat_window textarea").width(x - 40 - 5);
 	$(".chat_window").height(y - 190);
-  
+
 	var url = location.href;
 	var channel = url.match(/channel=[^&]*/);
 	if (channel != null) {
@@ -362,8 +367,10 @@ $(function () {
 	isTabOpen = 1;
 
 	var content = "";
+	var e = "";
 	for (var i = 0; i < emoticons.length; i++) {
-		content += "<li><a href=\"javascript:EmoticonAdv.insertSmiley('" + (emoticons[i].pattern[0]).replace("'", "\\'") + "');void(0)\" title=\"" + htmlEntities(emoticons[i].pattern[0]) + "\" style=\"" + emoticons[i].css + "\" class=\"emoticon\" alt=\"" + htmlEntities(emoticons[i].pattern[0]) + "\">\"" + htmlEntities(emoticons[i].pattern[0]) + "\"</a></li>";
+		e = (emoticons[i].pattern[0]).replace(/&lt;/g, "<").replace(/&gt;/g, '>');
+		content += "<li><a href=\"javascript:EmoticonAdv.insertSmiley('" + e.replace("'", "\\'") + "');void(0)\" title=\"" + htmlEntities(emoticons[i].pattern[0]) + "\" style=\"" + emoticons[i].css + "\" class=\"emoticon\" alt=\"" + htmlEntities(emoticons[i].pattern[0]) + "\">\"" + htmlEntities(emoticons[i].pattern[0]) + "\"</a></li>";
 	}
 	$('#connies').html(content);
 });

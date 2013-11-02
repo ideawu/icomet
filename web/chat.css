@@ -1,0 +1,118 @@
+body{
+  margin: 0;
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: arial;
+  background: #fff;
+}
+
+#login_form *{
+  font-size: 16px;
+}
+#login_form{
+  font-size: 18px;
+  margin: 120px auto;
+  padding: 40px 0px;
+  width: 420px;
+  text-align: center;
+  border: 2px solid #996;
+  background: #cfc;
+}
+input{
+  padding: 3px;
+}
+button{
+  font-size: 14px;
+}
+
+#chat_window{
+  margin: 10px auto;
+}
+#chat_window textarea{
+  margin: 0 auto; height: 100px;
+}
+.chat_window{
+  margin: 0 auto;
+  padding: 4px;
+  height: 500px;
+  border: 1px solid #ccc;
+  overflow-y: scroll;
+}
+#recv_chat_window{
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.chat_names{
+  text-align: right;
+  color: #ED145B;
+  word-wrap: break-word;
+  vertical-align: top;
+  font-weight: bold;
+  width: 70px;
+}
+.chat_content{
+  text-align: left;
+  word-wrap: break-word;
+  width: 100%;
+}
+
+.sent {
+  background:url(sending.gif);
+  background-size: 16px 16px;
+}
+
+.emoticon {
+  display:inline-block;
+  text-indent:-9999px;
+  width:16px;
+  height:16px;
+  background:url(emoticons.png);
+  background-repeat:no-repeat;
+}
+
+.emoticon{
+  background-position:0 0; margin-top:-2px;
+}
+#emoticonDropDown {
+  position:absolute;
+  z-index:100;
+  border:2px solid #eee;
+  background-color: #fff;
+  padding:2px;
+}
+#emoticonDropDown li{
+  display: inline;
+  float:right;
+  list-style-type: none;
+  padding: 0;
+  margin:0;
+  height:20px;
+  width:20px;
+}
+#emoticonDropDown ul{
+  line-height:16px;
+  width: 120px;
+  margin: 0;
+  padding: 0;
+}
+#emoticonDropDown a{
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: #000;
+  height:16px;
+  width:16px;
+  padding-top:2px;
+}
+#emoticonDropDown a:hover{
+  background-color: #888;
+}
+#emoticonDropDown a.closeLink{
+  color:#aaa;
+  clear: both;
+  width:100%;
+  height:10px;
+  font-size:0.6em;
+  padding:0;
+  margin:0;
+}
