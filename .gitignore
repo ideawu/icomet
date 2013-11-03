@@ -1,6 +1,5 @@
 version.h
 log.txt
-config.h
 comet-server
 online-server
 *.dSYM
