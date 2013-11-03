@@ -218,7 +218,7 @@ function iComet(config){
 					self.token = msg.token;
 					try{
 						var a = parseInt(msg.sub_timeout) || 0;
-						self.sub_timeout = (a * 1.5) * 1000;
+						self.sub_timeout = (a * 1.2) * 1000;
 					}catch(e){}
 					self.log('start sub ' + self.cname + ', timeout=' + self.sub_timeout + 'ms');
 					self._start_timeout_checker();
