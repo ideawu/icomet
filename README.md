@@ -17,18 +17,18 @@ A C1000K comet server built with libevent
 
 ```shell
 make
-./icomet
+./comet-server comet.conf
 
-curl -v "http://127.0.0.1:8100/sub?cid=12"
+curl -v "http://127.0.0.1:8100/sub?cname=12"
 # open another terminal
-curl -v "http://127.0.0.1:8000/pub?cid=12&content=hi"
+curl -v "http://127.0.0.1:8000/pub?cname=12&content=hi"
 ```
 
 ### JavaScript Library Usage
 
 ```javascript
 var comet = new iComet({
-	channel: 'abc',
+    channel: 'abc',
     signUrl: 'http://127.0.0.1:8000/sign',
     subUrl: 'http://127.0.0.1:8100/sub',
     callback: function(msg){
