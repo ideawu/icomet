@@ -1,219 +1,59 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<meta name="keywords" content="comet, ajax server push, long-polling, comet server, chat" />
-	<meta name="description" content="icomet is a open source C1000K comet server built with libevent, providing full server-push solution of both comet server and js client API." />
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="keywords" content="comet, ajax server push, long-polling, comet server, chat" />
+		<meta name="description" content="icomet is a open source C1000K comet server built with libevent, providing full server-push solution of both comet server and js client API." />
 
-	<title>icomet chat demo</title>
-	<style type="text/css">
-	body{
-		margin: 0;
-		padding: 0 12px;
-		font-size: 14px;
-		font-family: arial;
-		background: #fff;
-	}
-	
-	#login_form *{
-		font-size: 16px;
-	}
-	#login_form{
-		font-size: 18px;
-		margin: 120px auto;
-		padding: 40px 0px;
-		width: 420px;
-		text-align: center;
-		border: 2px solid #996;
-		background: #cfc;
-	}
-	input{padding: 3px;}
-	button{padding: 4px 6px; font-size: 14px;}
+		<title>iComet Example Chat</title>
+		<link rel='stylesheet' href='chat.css' type='text/css' media='all' />
+		<script src="js/jquery-1.9.1.js"></script>
+		<script src="js/json2.js"></script>
+		<script src="js/icomet.js"></script>
+		<script src="js/chat.js"></script>
+	</head>
+	<body>
+		<div id="login_form">
+			<table align="center">
+				<tr>
+					<td>Nickname</td>
+					<td><input type="text" name="nickname" size="28" value="test" /></td>
+				</tr>
+				<tr>
+					<td>Channel</td>
+					<td>
+						<input type="text" name="channel" size="28" value="abc" />
+					</td>
+				</tr>
+			</table>
+			<p><a href="#" onclick="$('*[name=channel]').val('public'); return false;">Join the public channel with others</a></p>
+			<button onclick="join()">&nbsp;Join&nbsp;</button>
+		</div>
 
-	#chat_window{margin: 10px auto; width: 380px;}
-	#chat_window textarea{
-		margin: 0 auto; width: 380px; height: 80px; padding: 4px;
-	}
-	.chat_window{
-		margin: 0 auto;
-		padding: 4px;
-		width: 380px;
-		height: 240px;
-		border: 1px solid #ccc;
-		overflow-y: scroll;
-	}
-	.msg{margin-bottom: 6px;}
-	.msg .content{padding: 4px 4px 4px 15px;}
-	</style>
-	<script src="js/jquery-1.9.1.js"></script>
-	<script src="js/json2.js"></script>
-	<script src="js/icomet.js"></script>
-</head>
-<body>
-
-<script>
-function random_str(size){
-	size = size || 20;
-	var time = (new Date().getTime() + '').substr(3);
-	var channel = time + Math.random() + '';
-	return channel.replace('.', '').substr(0, size);
-}
-
-var uid = 'u' + (Math.random() + '').replace('.', '').substr(1, 6);
-var nickname = '';
-
-var app_host = '127.0.0.1:8080';
-var admin_host = '127.0.0.1:8000';
-var icomet_host = '127.0.0.1:8100';
-
-// for testing only
-var n = location.href.match(/http[s]?:\/\/([^\/]*)\//);
-if(n && n.length == 2){
-	app_host = n[1];
-	var ps = n[1].split(':');
-	admin_host = ps[0] + ':8000';
-	icomet_host = ps[0] + ':8100';
-}
-
-var testing = 1;
-if(testing){
-	// This is for test purpose only
-	var sign_url = 'http://' + admin_host + '/sign';
-	var pub_url = 'http://' + admin_host + '/pub?cb=?';
-}else{
-	// In real world business, signUrl/pubUrl should link to an application server
-	// which will do neccessary authentication.
-	var sign_url = 'http://' + app_host + '/icomet/php/sign.php';
-	var pub_url = 'http://' + app_host + '/icomet/php/pub.php?cb=?';
-}
-var sub_url = 'http://' + icomet_host + '/sub';
-
-function join(){
-	nickname = $.trim($('*[name=nickname]').val());
-	nickname = nickname.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-	if(nickname.length == 0){
-		alert('Please enter your nickname!');
-		return false;
-	}
-	
-	var channel = $('*[name=channel]').val();
-	var comet = new iComet({
-		channel: channel,
-		signUrl: sign_url,
-		subUrl: sub_url,
-		callback: function(msg){
-			var msg = JSON.parse(msg.content);
-			var content = msg.content;
-			content = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-			content = content.replace(/\n\n+/g, '<br/><br/>');
-			content = content.replace(/\n/g, '<br/>');
+		<div id="chat_window" style="display: none;">
+			<div>
+				<span id="msgs">Messages:</span>
+				<div id="recv_chat_window" class="chat_window">
+					<table id="chat">
+					</table>
+				</div>
+			</div>
 			
-			var html = '';
-			html += '<div class="msg">';
-			html += '<b><span style="color: #393;">';
-			if(msg.uid == uid){
-				html += 'me';
-			}else{
-				html += msg.nickname + '(' + msg.uid + ')';
-			}
-			html += '</span> says:</b>';
-			html += '<div class="content">' + content + '</div>';
-			html += '</div>';
+			<div>
+				<div style="float: right; text-align: left">
+					<span id="errors"></span>
+				</div>
+				
+				<div style="float: left; text-align: right">
+					<a onclick="EmoticonAdv.showDropDown('btnlol', 'text')" id="btnlol" class="emoticon"></a>
+					<div id='emoticonDropDown' style='display: none;'><ul id="connies"></ul></div>
+					
+					<span id="nickname"></span> 
+					<button id="post" class="send" onclick="send()">Post</button>
+				</div>
+			</div>
 			
-			var div = $('#recv_chat_window');
-			div.append(html);
-			div.scrollTop(div[0].scrollHeight);
-		}
-	});
-	$('#login_form').hide();
-	$('#chat_window').show();
-	$('#chat_window h3').html('Channel: ' + channel);
-	$('#nickname').html(nickname);
-	
-	var url = location.href;
-	url = url.replace(/channel=[^&]*/, '').replace(/\?$/, '');
-	url += (url.indexOf('?') == -1)? '?' : '&';
-	url += 'channel=' + channel;
-	var html = '';
-	html += 'Tell your friend to join this chat with this link:<br/>';
-	html += url;
-	$('#share_this').html(html);
-}
-
-function send(){
-	var t = $('#chat_window textarea[name=content]');
-	var content = $.trim(t.val());
-	if(content.length == 0){
-		alert('content empty!');
-		return false;
-	}
-	if(content.length > 1000){
-		alert('content too long!');
-		return false;
-	}
-	var msg = {
-		'uid': uid,
-		'nickname': nickname,
-		'content': content
-	};
-	
-	var data = {};
-	data.cname = $('*[name=channel]').val();
-	data.content = JSON.stringify(msg);
-	data.content = JSON.stringify(data.content);
-	data.content = data.content.substr(1, data.content.length - 2);
-
-	$('button.send').attr('disabled', 'disabled');
-	$.getJSON(pub_url, data, function(){
-		t.val('');
-		$('button.send').removeAttr('disabled');
-	});
-}
-
-$(function(){
-	var url = location.href;
-	var channel = url.match(/channel=[^&]*/);
-	if(channel != null){
-		var channel = channel[0].replace('channel=', '');
-		channel = channel.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-	}else{
-		var channel = random_str();
-	}
-	$('*[name=channel]').val(channel);
-	$('*[name=nickname]').val(uid);
-});
-</script>
-
-<div id="login_form">
-	<table align="center">
-		<tr>
-			<td>Nickname</td>
-			<td><input type="text" name="nickname" size="28" value="test" /></td>
-		</tr>
-		<tr>
-			<td>Channel</td>
-			<td>
-				<input type="text" name="channel" size="28" value="abc" />
-			</td>
-		</tr>
-	</table>
-	<p><a href="#" onclick="$('*[name=channel]').val('public'); return false;">Join the public channel with others</a></p>
-	<button onclick="join()">&nbsp;Join&nbsp;</button>
-</div>
-
-<div id="chat_window" style="display: none;">
-	<h3></h3>
-	<p id="share_this"></p>
-	<div style="margin-bottom: 10px;">
-		Messages:
-		<div id="recv_chat_window" class="chat_window"></div>
-	</div>
-	<textarea name="content"></textarea>
-	<div style="text-align: right;">
-		<span id="nickname"></span>
-		<button class="send" onclick="send()">Post</button>
-	</div>
-</div>
-
-</body>
+			<textarea id="text" name="content"></textarea>
+		</div>
+	</body>
 </html>
