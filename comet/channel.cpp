@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "../build.h"
 #include "channel.h"
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>

@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "../build.h"
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>

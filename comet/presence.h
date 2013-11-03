@@ -1,15 +1,14 @@
-#ifndef ICOMET_PRESENCE_SUBSCRIBER_H
-#define ICOMET_PRESENCE_SUBSCRIBER_H
+#ifndef ICOMET_PRESENCE_H
+#define ICOMET_PRESENCE_H
 
 #include <evhttp.h>
 #include <event2/http.h>
 
 class Server;
-	
+
 enum PresenceType{
-	PresenceOnline  = 1,
-	PresenceOffline = 2,
-	PresenceStay    = 3
+	PresenceOffline = 0,
+	PresenceOnline  = 1
 };
 
 class PresenceSubscriber

@@ -1,4 +1,4 @@
-include ../config.mk
+include ../build.mk
 
 OBJS = log.o config.o
 EXES = 

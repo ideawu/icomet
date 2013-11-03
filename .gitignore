@@ -1,4 +1,6 @@
 version.h
+build.h
+build.mk
 log.txt
 comet-server
 online-server

@@ -68,42 +68,42 @@ fi
 cd "$DIR"
 
 
-######### generate config.h #########
+######### generate build.h #########
 
-rm -f config.h
-echo "#ifndef ICOMET_CONFIG_H" >> config.h
-echo "#define ICOMET_VERSION \"`cat version`\"" >> config.h
+rm -f build.h
+echo "#ifndef ICOMET_CONFIG_H" >> build.h
+echo "#define ICOMET_VERSION \"`cat version`\"" >> build.h
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
 else
-	echo "#include <stdlib.h>" >> config.h
-	echo "#include <jemalloc/jemalloc.h>" >> config.h
+	echo "#include <stdlib.h>" >> build.h
+	echo "#include <jemalloc/jemalloc.h>" >> build.h
 fi
-echo "#endif" >> config.h
+echo "#endif" >> build.h
 
 
-######### generate config.mk #########
+######### generate build.mk #########
 
-rm -f config.mk
+rm -f build.mk
 
-echo C=$C >> config.mk
-echo CC=$CC >> config.mk
-echo CFLAGS := >> config.mk
-echo CFLAGS += -g -O2 -Wall -Wno-sign-compare >> config.mk
-echo CFLAGS += -D__STDC_FORMAT_MACROS >> config.mk
-echo CFLAGS += -I \"$LIBEVENT_PATH\" >> config.mk
-echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> config.mk
-echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> config.mk
+echo C=$C >> build.mk
+echo CC=$CC >> build.mk
+echo CFLAGS := >> build.mk
+echo CFLAGS += -g -O2 -Wall -Wno-sign-compare >> build.mk
+echo CFLAGS += -D__STDC_FORMAT_MACROS >> build.mk
+echo CFLAGS += -I \"$LIBEVENT_PATH\" >> build.mk
+echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> build.mk
+echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> build.mk
 
-echo CLIBS := >> config.mk
-echo CLIBS += $PLATFORM_LIBS >> config.mk
+echo CLIBS := >> build.mk
+echo CLIBS += $PLATFORM_LIBS >> build.mk
 
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
 else
-	echo CFLAGS += -I \"$JEMALLOC_PATH/include\" >> config.mk
-	echo CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\" >> config.mk
+	echo CFLAGS += -I \"$JEMALLOC_PATH/include\" >> build.mk
+	echo CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\" >> build.mk
 fi
 
-echo LIBEVENT_PATH = $LIBEVENT_PATH >> config.mk
+echo LIBEVENT_PATH = $LIBEVENT_PATH >> build.mk
 

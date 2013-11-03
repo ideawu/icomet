@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "../build.h"
 #include <http-internal.h>
 #include <event2/http.h>
 #include <event2/buffer.h>

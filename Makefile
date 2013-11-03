@@ -1,5 +1,5 @@
 $(shell sh build.sh 1>&2)
-include config.mk
+include build.mk
 
 .PHONY: all tools clean
 

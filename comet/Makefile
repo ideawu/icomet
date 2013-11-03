@@ -1,4 +1,4 @@
-include ../config.mk
+include ../build.mk
 
 OBJS = channel.o server.o
 CFLAGS += -I ../
