@@ -224,7 +224,7 @@ if (n && n.length == 2) {
 	icomet_host = ps[0] + ':8100';
 }
 
-var testing = 0;
+var testing = location.href.indexOf('http') != 0;
 if (testing) {
 	// This is for test purpose only
 	var sign_url = 'http://' + admin_host + '/sign';
@@ -232,8 +232,13 @@ if (testing) {
 } else {
 	// In real world business, signUrl/pubUrl should link to an application server
 	// which will do neccessary authentication.
-	var sign_url = 'http://' + app_host + '/web/php/sign.php';
-	var pub_url = 'http://' + app_host + '/web/php/pub.php?cb=?';
+	var n = location.href.match(/http[s]?:\/\/[^\/]*\/(.*)\/.*/);
+	var path = '';
+	if(n && n.length == 2){
+		path = '/' + n[1];
+	}
+	var sign_url = 'http://' + app_host + path + '/php/sign.php';
+	var pub_url = 'http://' + app_host + path + '/php/pub.php?cb=?';
 }
 var sub_url = 'http://' + icomet_host + '/sub';
 
@@ -303,8 +308,9 @@ function join() {
 	var url = location.href.replace(/channel=[^&]*/, '').replace(/\?$/, '');
 	url += ((url.indexOf('?') == -1) ? '?' : '&') + 'channel=' + channel;
 	var html = '';
-	html += 'Tell your friend to join this chat with this link: ' + url;
-	$('#msgs').prepend(html);
+	html += 'Tell your friend to join this chat with this link: '
+	html += '<a target="_blank" href="' + url + '">' + url + '</a>';
+	$('#share').html(html);
 }
 
 function send() {
