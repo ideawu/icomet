@@ -420,7 +420,7 @@ int Server::sign(struct evhttp_request *req){
 		channel->msg_seq_min(),
 		channel->token.c_str(),
 		expires,
-		ServerConfig::channel_timeout);
+		ServerConfig::polling_timeout);
 	if(cb){
 		evbuffer_add(buf, ");\n", 3);
 	}else{
