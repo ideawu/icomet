@@ -31,9 +31,9 @@ var comet = new iComet({
     channel: 'abc',
     signUrl: 'http://127.0.0.1:8000/sign',
     subUrl: 'http://127.0.0.1:8100/sub',
-    callback: function(msg){
+    callback: function(content){
         // on server push
-        alert(msg.content);
+        alert(content);
     }
 });
 ```
