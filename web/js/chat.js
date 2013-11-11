@@ -211,6 +211,7 @@ function random_str(size) {
 var uid = 'u' + (Math.random() + '').replace('.', '').substr(1, 6);
 var nickname = '';
 
+var comet;
 var app_host = '127.0.0.1:8080';
 var admin_host = '127.0.0.1:8000';
 var icomet_host = '127.0.0.1:8100';
@@ -290,16 +291,16 @@ function join() {
 	}
 
 	var channel = $('*[name=channel]').val();
-	var comet = new iComet({
-			channel : channel,
-			signUrl : sign_url,
-			subUrl : sub_url,
-			callback : function (msg) {
-				var msg = JSON.parse(msg.content);
-				var content = msg.content;
-				addmsg(msg.uid, msg.nickname, content, false);
-			}
-		});
+	comet = new iComet({
+		channel : channel,
+		signUrl : sign_url,
+		subUrl : sub_url,
+		pubUrl : pub_url,
+		callback : function (content) {
+			var msg = JSON.parse(content);
+			addmsg(msg.uid, msg.nickname, msg.content, false);
+		}
+	});
 	$('#login_form').hide();
 	$('#chat_window').show();
 	$('#chat_window h3').html('Channel: ' + channel);
@@ -327,21 +328,15 @@ function send() {
 		return false;
 	}
 	$('#errors').html('');
+
+	addmsg(uid, nickname, content, true);
+	
 	var msg = {
 		'uid' : uid,
 		'nickname' : nickname,
 		'content' : content
 	};
-
-	var data = {};
-	data.cname = $('*[name=channel]').val();
-	data.content = JSON.stringify(msg);
-	data.content = JSON.stringify(data.content);
-	data.content = data.content.substr(1, data.content.length - 2);
-
-	addmsg(uid, nickname, content, true);
-
-	$.getJSON(pub_url, data, function () {});
+	comet.pub(JSON.stringify(msg));
 }
 
 var w = window,
