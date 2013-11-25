@@ -63,3 +63,30 @@ var comet = new iComet({
 http://www.ideawu.com/icomet/chat.html
 
 
+## Nginx + icomet
+
+You can integrate icomet with nginx. If you are running you website on port ```80``` with domain ```www.test.com```. That is you visit your website home page with this url:
+
+```
+http://www.test.com/
+```
+
+Then you want to run icomet on the same server with port ```80```, for the concern of firewall issue. You can config nginx to pass request to icomet:
+
+```
+location ~ ^/icomet/.* {
+	rewrite ^/icomet/(.*) /$1 break;
+
+	proxy_read_timeout 60; 
+	proxy_connect_timeout 60; 
+	proxy_pass   http://127.0.0.1:8100;
+}   
+```
+
+Then, this url is used to subscribe to icomet channel xxx:
+
+```
+http://www.test.com/icomet/sub?cname=xxx
+```
+
+
