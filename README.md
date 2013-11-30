@@ -16,6 +16,9 @@ A C1000K comet server built with libevent
 ## Usage
 
 ```shell
+wget --no-check-certificate https://github.com/ideawu/icomet/archive/master.zip
+unzip master.zip
+cd icomet-master/
 make
 ./comet-server comet.conf
 
