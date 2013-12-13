@@ -81,6 +81,10 @@ Channel* Server::new_channel(const std::string &cname){
 	
 	add_presence(PresenceOnline, channel->name);
 	
+	if(channel->token.empty()){
+		channel->create_token();
+	}
+
 	return channel;
 }
 
@@ -249,7 +253,9 @@ int Server::sub(struct evhttp_request *req){
 		evbuffer_free(buf);
 		return 0;
 	}
-	channel->idle = ServerConfig::channel_idles;
+	if(channel->idle < ServerConfig::channel_idles){
+		channel->idle = ServerConfig::channel_idles;
+	}
 
 	set_response_no_cache(req);
 	
@@ -343,12 +349,26 @@ int Server::pub(struct evhttp_request *req){
 	Channel *channel = NULL;
 	channel = this->get_channel_by_name(cname);
 	if(!channel || channel->idle == -1){
+		channel = this->new_channel(cname);
+		if(!channel){
+			struct evbuffer *buf = evbuffer_new();
+			evbuffer_add_printf(buf, "too many channels\n");
+			evhttp_send_reply(req, 404, "Not Found", buf);
+			evbuffer_free(buf);
+			return 0;
+		}
+		int expires = ServerConfig::channel_timeout;
+		log_debug("auto sign channel on pub, cname:%s, cid:%d, t:%s, expires:%d",
+			cname.c_str(), channel->id, channel->token.c_str(), expires);
+		channel->idle = expires/CHANNEL_CHECK_INTERVAL;
+		/*
 		struct evbuffer *buf = evbuffer_new();
 		log_trace("cname[%s] not connected, not pub content: %s", cname.c_str(), content);
 		evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
 		evbuffer_free(buf);
 		return 0;
+		*/
 	}
 	log_debug("channel: %s, subs: %d, pub content: %s", channel->name.c_str(), channel->subs.size, content);
 		
@@ -395,9 +415,6 @@ int Server::sign(struct evhttp_request *req){
 		return 0;
 	}
 
-	if(channel->token.empty()){
-		channel->create_token();
-	}
 	if(channel->idle == -1){
 		log_debug("%s:%d sign cname:%s, cid:%d, t:%s, expires:%d",
 			req->remote_host, req->remote_port,

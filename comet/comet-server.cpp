@@ -127,9 +127,16 @@ int main(int argc, char **argv){
 	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
-	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
 	ServerConfig::channel_buffer_size = conf->get_num("front.channel_buffer_size");
-	ServerConfig::channel_timeout = 0.5 * ServerConfig::polling_timeout;
+	ServerConfig::channel_timeout = conf->get_num("front.channel_timeout");
+	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
+	if(ServerConfig::polling_timeout <= 0){
+		log_fatal("Invalid polling_timeout!");
+		exit(0);
+	}
+	if(ServerConfig::channel_timeout <= 0){
+		ServerConfig::channel_timeout = 0.5 * ServerConfig::polling_timeout;
+	}
 	
 	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
 	ServerConfig::channel_idles = ServerConfig::channel_timeout / CHANNEL_CHECK_INTERVAL;
@@ -236,6 +243,7 @@ int main(int argc, char **argv){
 		log_info("    max_channels %d", ServerConfig::max_channels);
 		log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
 		log_info("    channel_buffer_size %d", ServerConfig::channel_buffer_size);
+		log_info("    channel_timeout %d", ServerConfig::channel_timeout);
 		log_info("    polling_timeout %d", ServerConfig::polling_timeout);
 		if(auth == "token"){
 			serv->auth = Server::AUTH_TOKEN;
