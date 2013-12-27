@@ -135,7 +135,7 @@ int main(int argc, char **argv){
 		exit(0);
 	}
 	if(ServerConfig::channel_timeout <= 0){
-		ServerConfig::channel_timeout = 0.5 * ServerConfig::polling_timeout;
+		ServerConfig::channel_timeout = (int)(0.5 * ServerConfig::polling_timeout);
 	}
 	
 	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
