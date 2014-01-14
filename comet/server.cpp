@@ -480,6 +480,33 @@ int Server::close(struct evhttp_request *req){
 	return 0;
 }
 
+int Server::clear(struct evhttp_request *req){
+	HttpQuery query(req);
+	std::string cname = query.get_str("cname", "");
+
+	Channel *channel = this->get_channel_by_name(cname);
+	if(!channel){
+		log_warn("channel %s not found", cname.c_str());
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf, "channel[%s] not connected\n", cname.c_str());
+		evhttp_send_reply(req, 404, "Not Found", buf);
+		evbuffer_free(buf);
+		return 0;
+	}
+	log_debug("clear channel: %s, subs: %d", cname.c_str(), channel->subs.size);
+		
+	// response to publisher
+	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
+	evhttp_send_reply(req, 200, "OK", buf);
+	evbuffer_free(buf);
+
+	channel->clear();
+
+	return 0;
+}
+
 int Server::info(struct evhttp_request *req){
 	HttpQuery query(req);
 	std::string cname = query.get_str("cname", "");

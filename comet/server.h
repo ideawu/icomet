@@ -55,6 +55,7 @@ public:
 	int pub(struct evhttp_request *req);
 	int sign(struct evhttp_request *req);
 	int close(struct evhttp_request *req);
+	int clear(struct evhttp_request *req);
 	int info(struct evhttp_request *req);
 	int check(struct evhttp_request *req);
 	

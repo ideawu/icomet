@@ -95,6 +95,11 @@ void close_handler(struct evhttp_request *req, void *arg){
 	serv->close(req);
 }
 
+void clear_handler(struct evhttp_request *req, void *arg){
+	CHECK_AUTH();
+	serv->clear(req);
+}
+
 void info_handler(struct evhttp_request *req, void *arg){
 	CHECK_AUTH();
 	serv->info(req);
@@ -155,6 +160,9 @@ int main(int argc, char **argv){
 		// 销毁通道
 		// /close?cname=abc
 		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
+		// 销毁通道
+		// /clear?cname=abc
+		evhttp_set_cb(admin_http, "/clear", clear_handler, NULL);
 		// 获取通道的信息
 		// /info?[cname=abc], or TODO: /info?cname=a,b,c
 		evhttp_set_cb(admin_http, "/info", info_handler, NULL);

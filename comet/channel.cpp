@@ -52,6 +52,10 @@ void Channel::create_token(){
 	token.resize(32);
 }
 
+void Channel::clear(){
+	msg_list.clear();
+}
+
 void Channel::send(const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
 	LinkedList<Subscriber *>::Iterator it = subs.iterator();
