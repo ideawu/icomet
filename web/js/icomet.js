@@ -239,9 +239,9 @@ function iComet(config){
 	}
 
 	self.stop = function(){
+		self.stopped = true;
 		self.last_sub_time = 0;
 		self.need_fast_reconnect = true;
-		self.stopped = true;
 		if(self.timer){
 			clearTimeout(self.timer);
 			self.timer = null;
