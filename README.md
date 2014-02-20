@@ -5,7 +5,7 @@ A C1000K comet server built with libevent.
 
 iComet is powerfull, can be used as the messaging server of many applications, such as [web chat](http://www.ideawu.com/icomet/chat.html), mobile application, desktop application etc.
 
-iComet provides a easy-to-use JavaScript library, with iComet js lib, you can build a web app that needs server-push eature very fast.
+iComet provides a easy-to-use JavaScript library, with iComet js lib, you can build a web app that needs server-push feature very fast.
 
 ## Supported Platforms and Browsers
 
