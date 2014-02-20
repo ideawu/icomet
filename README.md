@@ -1,7 +1,7 @@
 icomet
 ======
 
-A C1000K comet server built with libevent.
+A C1000K comet/push server built with libevent.
 
 iComet is powerfull, can be used as the messaging server of many applications, such as [web chat](http://www.ideawu.com/icomet/chat.html), mobile application, desktop application etc.
 
@@ -84,8 +84,9 @@ Then you want to run icomet on the same server with port ```80```, for the conce
 location ~ ^/icomet/.* {
 	rewrite ^/icomet/(.*) /$1 break;
 
-	proxy_read_timeout 60; 
-	proxy_connect_timeout 60; 
+	proxy_read_timeout 60;
+	proxy_connect_timeout 60;
+	proxy_buffering off;
 	proxy_pass   http://127.0.0.1:8100;
 }   
 ```
