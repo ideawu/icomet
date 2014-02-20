@@ -9,6 +9,7 @@
 #include "util/list.h"
 #include "util/objpool.h"
 #include "channel.h"
+#include "subscriber.h"
 #include "presence.h"
 
 #define DEFAULT_JSONP_CALLBACK	"icomet_cb"
@@ -35,6 +36,8 @@ private:
 
 	void add_presence(PresenceType type, const std::string &cname);
 	//void flush_presence();
+
+	int sub(struct evhttp_request *req, Subscriber::Type sub_type);
 public:
 	enum{
 		AUTH_NONE  = 0,
@@ -48,9 +51,10 @@ public:
 	
 	int check_timeout();
 	
-	int sub(struct evhttp_request *req);
 	int sub_end(Subscriber *sub);
 	int ping(struct evhttp_request *req);
+	int poll(struct evhttp_request *req);
+	int stream(struct evhttp_request *req);
 
 	int pub(struct evhttp_request *req);
 	int sign(struct evhttp_request *req);
@@ -61,6 +65,7 @@ public:
 	
 	int psub(struct evhttp_request *req);
 	int psub_end(PresenceSubscriber *psub);
+	
 };
 
 #endif

@@ -123,6 +123,7 @@ function iComet(config){
 				// so pause some seconds before sub again
 				setTimeout(self_sub, 1000 + Math.random() * 2000);
 			}else{
+				// we have created more than one connection, ignore it
 				self.log('ignore exceeded connections');
 			}
 			return;
