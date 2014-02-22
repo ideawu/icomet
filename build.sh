@@ -89,7 +89,7 @@ rm -f build.mk
 echo C=$C >> build.mk
 echo CC=$CC >> build.mk
 echo CFLAGS := >> build.mk
-echo CFLAGS += -g -O2 -Wall -Wno-sign-compare >> build.mk
+echo CFLAGS += -O2 -Wall -Wno-sign-compare >> build.mk
 echo CFLAGS += -D__STDC_FORMAT_MACROS >> build.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH\" >> build.mk
 echo CFLAGS += -I \"$LIBEVENT_PATH/include\" >> build.mk
@@ -106,4 +106,5 @@ else
 fi
 
 echo LIBEVENT_PATH = $LIBEVENT_PATH >> build.mk
+echo JEMALLOC_PATH = $JEMALLOC_PATH >> build.mk
 

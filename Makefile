@@ -16,5 +16,7 @@ clean:
 	cd src/comet; make clean
 
 clean_all: clean
-	rm -f deps/jemalloc-3.4.0/Makefile deps/libevent-2.0.21-stable/Makefile 
+	cd $(JEMALLOC_PATH); make clean
+	cd $(LIBEVENT_PATH); make clean
+	rm -f $(JEMALLOC_PATH)/Makefile $(LIBEVENT_PATH)/Makefile
 	
