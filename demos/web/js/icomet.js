@@ -98,7 +98,7 @@ function iComet(config){
 			return;
 		}
 		if(msg.type == '429'){
-			alert('too many connections');
+			//alert('too many connections');
 			self.log('resp', msg);
 			setTimeout(self_sub, 5000 + Math.random() * 5000);
 			return;
@@ -186,7 +186,7 @@ function iComet(config){
 	}
 
 	var self_sub = function(){
-		//self.log('sub');
+		self.log('sub');
 		self.stopped = false;
 		self.last_sub_time = (new Date()).getTime();
 		$('script.' + self.cb).remove();

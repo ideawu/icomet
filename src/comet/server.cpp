@@ -174,6 +174,10 @@ int Server::poll(struct evhttp_request *req){
 	return this->sub(req, Subscriber::POLL);
 }
 
+int Server::iframe(struct evhttp_request *req){
+	return this->sub(req, Subscriber::IFRAME);
+}
+
 int Server::stream(struct evhttp_request *req){
 	return this->sub(req, Subscriber::STREAM);
 }
@@ -188,24 +192,31 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	HttpQuery query(req);
 	int seq = query.get_int("seq", 0);
 	int noop = query.get_int("noop", 0);
-	const char *cb = query.get_str("cb", DEFAULT_JSONP_CALLBACK);
+	const char *cb = query.get_str("cb", "");
 	const char *token = query.get_str("token", "");
 	std::string cname = query.get_str("cname", "");
+	
+	if(sub_type == Subscriber::POLL && cb[0] == '\0'){
+		cb = DEFAULT_JSONP_CALLBACK;
+	}
 
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel && this->auth == AUTH_NONE){
 		channel = this->new_channel(cname);
 		if(!channel){
-			evhttp_send_reply(req, 429, "Too Many Channels", NULL);
+			//evhttp_send_reply(req, 429, "Too many channels", NULL);
+			Subscriber::send_error_reply(sub_type, req, cb, "429", "Too many channels");
 			return 0;
 		}
 	}
 	if(!channel || (this->auth == AUTH_TOKEN && channel->token != token)){
-		channel->error_token_error(req, cb, token);
+		//evhttp_send_reply(req, 401, "Token error", NULL);
+		Subscriber::send_error_reply(sub_type, req, cb, "401", "Token error");
 		return 0;
 	}
 	if(channel->subs.size >= ServerConfig::max_subscribers_per_channel){
-		channel->error_too_many_subscribers(req, cb);
+		//evhttp_send_reply(req, 429, "Too many subscribers", NULL);
+		Subscriber::send_error_reply(sub_type, req, cb, "429", "Too many subscribers");
 		return 0;
 	}
 	
@@ -213,19 +224,13 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 		channel->idle = ServerConfig::channel_idles;
 	}
 	
-	// send buffered messages
-	if(!channel->msg_list.empty() && channel->seq_next != seq){
-		//channel->send_old_msgs(req, seq, cb);
-		//return 0;
-	}
-	
 	Subscriber *sub = sub_pool.alloc();
 	sub->req = req;
 	sub->serv = this;
 	sub->type = sub_type;
 	sub->idle = 0;
-	sub->seq = seq;
-	sub->noop_seq = noop;
+	sub->seq_next = seq;
+	sub->seq_noop = noop;
 	sub->callback = cb;
 	
 	channel->add_subscriber(sub);

@@ -16,9 +16,11 @@ public:
 	// rename max_channel_idles
 	static int channel_idles; // max idle count to offline
 	
-	static std::string stream_header_template;
-	static std::string stream_chunk_prefix_template;
-	static std::string stream_chunk_suffix_template;
+	/*
+	static std::string iframe_header;
+	static std::string iframe_chunk_prefix;
+	static std::string iframe_chunk_suffix;
+	*/
 	
 	//int load(Config *conf);
 };

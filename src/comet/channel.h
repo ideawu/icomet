@@ -70,11 +70,6 @@ public:
 	void del_subscriber(Subscriber *sub);
 	void send(const char *type, const char *content);
 	void clear();
-
-	void send_old_msgs(struct evhttp_request *req, int next_seq, const char *cb);
-	
-	void error_token_error(struct evhttp_request *req, const char *cb, const char *token);
-	void error_too_many_subscribers(struct evhttp_request *req, const char *cb);
 };
 
 #endif

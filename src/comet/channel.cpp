@@ -60,7 +60,7 @@ void Channel::clear(){
 void Channel::send(const char *type, const char *content){
 	LinkedList<Subscriber *>::Iterator it = subs.iterator();
 	while(Subscriber *sub = it.next()){
-		sub->send_chunk(type, content);
+		sub->send_chunk(this->seq_next, type, content);
 	}
 
 	if(strcmp(type, "data") == 0){
@@ -73,64 +73,4 @@ void Channel::send(const char *type, const char *content){
 			log_trace("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
 		}
 	}
-}
-
-void Channel::send_old_msgs(struct evhttp_request *req, int next_seq, const char *cb){
-	std::vector<std::string>::iterator it = this->msg_list.end();
-	int msg_seq_min = this->seq_next - this->msg_list.size();
-	if(Channel::SEQ_GT(next_seq, this->seq_next) || Channel::SEQ_LT(next_seq, msg_seq_min)){
-		next_seq = msg_seq_min;
-	}
-	log_debug("send old msg: [%d, %d]", next_seq, this->seq_next - 1);
-	it -= (this->seq_next - next_seq);
-
-	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf, "%s([", cb);
-	for(/**/; it != this->msg_list.end(); it++, next_seq++){
-		std::string &msg = *it;
-		evbuffer_add_printf(buf,
-			"{type: \"data\", cname: \"%s\", seq: \"%d\", content: \"%s\"}",
-			this->name.c_str(),
-			next_seq,
-			msg.c_str());
-		if(next_seq != this->seq_next - 1){
-			evbuffer_add(buf, ",", 1);
-		}
-	}
-	evbuffer_add_printf(buf, "]);\n");
-	evhttp_send_reply(req, HTTP_OK, "OK", buf);
-	evbuffer_free(buf);
-}
-
-void Channel::error_token_error(struct evhttp_request *req, const char *cb, const char *token){
-	log_debug("%s:%d, Token Error, cname: %s, token: %s",
-		req->remote_host,
-		req->remote_port,
-		this->name.c_str(),
-		token
-		);
-	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf,
-		"%s({type: \"401\", cname: \"%s\", seq: \"0\", content: \"Token Error\"});\n",
-		cb,
-		this->name.c_str()
-		);
-	evhttp_send_reply(req, HTTP_OK, "OK", buf);
-	evbuffer_free(buf);
-}
-
-void Channel::error_too_many_subscribers(struct evhttp_request *req, const char *cb){
-	log_debug("%s:%d, Too many subscribers, cname: %s",
-		req->remote_host,
-		req->remote_port,
-		this->name.c_str()
-		);
-	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf,
-		"%s({type: \"429\", cname: \"%s\", seq: \"0\", content: \"Too many subscribers\"});\n",
-		cb,
-		this->name.c_str()
-		);
-	evhttp_send_reply(req, HTTP_OK, "OK", buf);
-	evbuffer_free(buf);
 }

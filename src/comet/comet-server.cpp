@@ -28,9 +28,11 @@ int ServerConfig::polling_idles					= 0;
 int ServerConfig::channel_buffer_size			= 0;
 int ServerConfig::channel_timeout				= 0;
 int ServerConfig::channel_idles					= 0;
-std::string ServerConfig::stream_header_template		= "";
-std::string ServerConfig::stream_chunk_prefix_template	= "";
-std::string ServerConfig::stream_chunk_suffix_template	= "";
+/*
+std::string ServerConfig::iframe_header			= "";
+std::string ServerConfig::iframe_chunk_prefix	= "";
+std::string ServerConfig::iframe_chunk_suffix	= "";
+*/
 
 Server *serv = NULL;
 Config *conf = NULL;
@@ -66,6 +68,10 @@ void signal_cb(evutil_socket_t sig, short events, void *user_data){
 
 void poll_handler(struct evhttp_request *req, void *arg){
 	serv->poll(req);
+}
+
+void iframe_handler(struct evhttp_request *req, void *arg){
+	serv->iframe(req);
 }
 
 void stream_handler(struct evhttp_request *req, void *arg){
@@ -153,10 +159,6 @@ int main(int argc, char **argv){
 	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
 	ServerConfig::channel_idles = ServerConfig::channel_timeout / CHANNEL_CHECK_INTERVAL;
 	
-	ServerConfig::stream_header_template = conf->get_str("front.stream_header_template");
-	ServerConfig::stream_chunk_prefix_template = conf->get_str("front.stream_chunk_prefix_template");
-	ServerConfig::stream_chunk_suffix_template = conf->get_str("front.stream_chunk_suffix_template");
-		
 	serv = new Server();
 	ip_filter = new IpFilter();
 
@@ -239,6 +241,8 @@ int main(int argc, char **argv){
 		// /sub?cname=abc&cb=jsonp&token=&seq=123&noop=123
 		evhttp_set_cb(front_http, "/sub", poll_handler, NULL);
 		evhttp_set_cb(front_http, "/poll", poll_handler, NULL);
+		// forever iframe
+		evhttp_set_cb(front_http, "/iframe", iframe_handler, NULL);
 		// http endless chunk
 		evhttp_set_cb(front_http, "/stream", stream_handler, NULL);
 		// /ping?cb=jsonp

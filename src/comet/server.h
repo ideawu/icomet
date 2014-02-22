@@ -54,6 +54,7 @@ public:
 	int sub_end(Subscriber *sub);
 	int ping(struct evhttp_request *req);
 	int poll(struct evhttp_request *req);
+	int iframe(struct evhttp_request *req);
 	int stream(struct evhttp_request *req);
 
 	int pub(struct evhttp_request *req);

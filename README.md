@@ -60,8 +60,8 @@ var comet = new iComet({
 ## Run the chat demo
 
 1. Compile and start icomet server
-1. Drag and drop the file web/chat.html into one web browser
-1. Drag and drop the file web/chat.html into another different web browser
+1. Drag and drop the file demos/web/chat.html into one web browser
+1. Drag and drop the file demos/web/chat.html into another different web browser
 1. Start chatting!
 
 
