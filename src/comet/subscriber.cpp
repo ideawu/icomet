@@ -50,11 +50,14 @@ void Subscriber::send_old_msgs(){
 
 	struct evbuffer *buf = evbuffer_new();
 	if(this->type == POLL){
-		evbuffer_add_printf(buf, "%s([", this->callback.c_str());
+		if(!this->callback.empty()){
+			evbuffer_add_printf(buf, "%s(", this->callback.c_str());
+		}
+		evbuffer_add_printf(buf, "[");
 		for(/**/; it != channel->msg_list.end(); it++, this->seq_next++){
 			std::string &msg = *it;
 			evbuffer_add_printf(buf,
-				"{type: \"data\", cname: \"%s\", seq: \"%d\", content: \"%s\"}",
+				"{\"type\":\"data\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
 				this->channel->name.c_str(),
 				this->seq_next,
 				msg.c_str());
@@ -62,7 +65,11 @@ void Subscriber::send_old_msgs(){
 				evbuffer_add(buf, ",", 1);
 			}
 		}
-		evbuffer_add_printf(buf, "]);\n");
+		evbuffer_add_printf(buf, "]");
+		if(!this->callback.empty()){
+			evbuffer_add_printf(buf, ");");
+		}
+		evbuffer_add_printf(buf, "\n");
 		evhttp_send_reply_chunk(this->req, buf);
 		this->close();
 	}else if(this->type == IFRAME || this->type == STREAM){
@@ -88,20 +95,24 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
 	
 	if(this->type == POLL){
-		evbuffer_add_printf(buf, "%s(", this->callback.c_str());
+		if(!this->callback.empty()){
+			evbuffer_add_printf(buf, "%s(", this->callback.c_str());
+		}
 	}else if(this->type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
 	}
 	
 	evbuffer_add_printf(buf,
-		"{type: \"%s\", cname: \"%s\", seq: \"%d\", content: \"%s\"}",
+		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
 		type,
 		this->channel->name.c_str(),
 		seq,
 		content);
 
 	if(this->type == POLL){
-		evbuffer_add_printf(buf, ");");
+		if(!this->callback.empty()){
+			evbuffer_add_printf(buf, ");");
+		}
 	}else if(this->type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_suffix.c_str());
 	}
@@ -126,7 +137,7 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 	}
 	
 	evbuffer_add_printf(buf,
-		"{type: \"%s\", cname: \"%s\", seq: \"%d\", content: \"%s\"}",
+		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
 		type,
 		"",
 		0,

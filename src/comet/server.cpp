@@ -195,10 +195,6 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	const char *cb = query.get_str("cb", "");
 	const char *token = query.get_str("token", "");
 	std::string cname = query.get_str("cname", "");
-	
-	if(sub_type == Subscriber::POLL && cb[0] == '\0'){
-		cb = DEFAULT_JSONP_CALLBACK;
-	}
 
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel && this->auth == AUTH_NONE){
@@ -263,7 +259,7 @@ int Server::ping(struct evhttp_request *req){
 
 	struct evbuffer *buf = evbuffer_new();
 	evbuffer_add_printf(buf,
-		"%s({type: \"ping\", sub_timeout: %d});\n",
+		"%s({\"type\":\"ping\",\"sub_timeout\":%d});\n",
 		cb,
 		ServerConfig::polling_timeout);
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
@@ -311,7 +307,7 @@ int Server::pub(struct evhttp_request *req){
 	if(cb){
 		evbuffer_add_printf(buf, "%s(", cb);
 	}
-	evbuffer_add_printf(buf, "{type: \"ok\"}");
+	evbuffer_add_printf(buf, "{\"type\":\"ok\"}");
 	if(cb){
 		evbuffer_add(buf, ");\n", 3);
 	}else{
@@ -362,7 +358,7 @@ int Server::sign(struct evhttp_request *req){
 		evbuffer_add_printf(buf, "%s(", cb);
 	}
 	evbuffer_add_printf(buf,
-		"{type: \"sign\", cname: \"%s\", seq: %d, token: \"%s\", expires: %d, sub_timeout: %d}",
+		"{\"type\":\"sign\",\"cname\":\"%s\",\"seq\":%d,\"token\":\"%s\",\"expires\":%d,\"sub_timeout\":%d}",
 		channel->name.c_str(),
 		channel->msg_seq_min(),
 		channel->token.c_str(),

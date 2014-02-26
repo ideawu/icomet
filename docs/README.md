@@ -18,13 +18,13 @@ __Forever iframe__
 
 __Streaming(HTTP endless chunk)__
 
-	http://127.0.0.1:8100/stream?cname=$channel&seq=$last_seq&token=$token
+	http://127.0.0.1:8100/stream?cname=$channel&seq=$next_seq&token=$token
 
 __Parameters:__
 
 * cname: The name of the channel this client will subscribe to.
 * token: Token is returned by ```/sign```.
-* seq: The sequence number of the next data message that will sent by iComet server. iComet client must remember every message's sequence number, plus it with 1, and used for next polling or reconnect streaming.
+* seq: The sequence number of the next data message that will be sent by iComet server. iComet client must remember every message's sequence number, plus it with 1, and used for next polling or reconnect streaming.
 
 __Response:__
 
@@ -32,15 +32,26 @@ If the HTTP response tatus code is not ```200```, it is likely that the iComet s
 
 __Long-polling__
 
+	icomet_cb([{type: "data", cname: "a", seq: "1", content: "a"}]);
 	icomet_cb({type: "data", cname: "a", seq: "1", content: "a"});
+
+When there are buffered messages attached with the channel, the response is as the first one, the parameter of the function call is an array of message objects.
+
+When a new message arrives, the response is as the second one, the parameter of the function call is the message object.
+
+Since the response if received, the request if finished, client must send another request.
 
 __Forever iframe__
 
 	<script>parent.icomet_cb({type: "data", cname: "a", seq: "0", content: "a"});</script>
 
+Each message(__old and new__) is responsed as a HTTP chunk, the chunk is a snipet of JavaScript code, the request is not finished, so client do not need to send another request.
+
 __Streaming(HTTP endless chunk)__
 
 	{type: "data", cname: "a", seq: "1", content: "a"}
+
+Each message(__old and new__) is responsed as a HTTP chunk, the request is not finished, so client do not need to send another request.
 
 __Parameters:__
 
