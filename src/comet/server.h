@@ -13,7 +13,7 @@
 #include "presence.h"
 
 #define DEFAULT_JSONP_CALLBACK	"icomet_cb"
-#define CHANNEL_CHECK_INTERVAL	3
+#define CHANNEL_CHECK_INTERVAL	1
 
 class Server
 {
