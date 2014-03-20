@@ -97,4 +97,3 @@ Then, this url is used to subscribe to icomet channel xxx:
 http://www.test.com/icomet/sub?cname=xxx
 ```
 
-

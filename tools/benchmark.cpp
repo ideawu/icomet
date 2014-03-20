@@ -58,7 +58,7 @@ int main(int argc, char **argv){
 		evhttp_request_set_chunked_cb(req, chunk_cb);
 
 		char buf[128];
-		snprintf(buf, sizeof(buf), "/sub?cid=%d", num);
+		snprintf(buf, sizeof(buf), "/sub?cname=%d", num);
 		evhttp_make_request(conn, req, EVHTTP_REQ_GET, buf);
 		evhttp_connection_set_timeout(req->evcon, 864000);
 		event_base_loop(base, EVLOOP_NONBLOCK);
