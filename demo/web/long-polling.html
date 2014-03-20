@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>iComet long-polling demo</title>
+</head>
+<body>
+
+<pre style="height:200px; width: 600px; border: 1px solid #999; overflow: auto; background: #eee; padding: 8px;">
+## How to Use?
+
+1. start comet-server
+
+2. assuming you are running nginx listening on port 8080, if not,
+you will have to modify "8080" in this file to the exact port number,
+configure your nginx.conf, add the lines below and restart:
+
+location ~ ^/icomet/.* {
+	rewrite ^/icomet/(.*) /$1 break;
+
+	proxy_buffering off;
+	proxy_read_timeout 60;
+	proxy_connect_timeout 60;
+	proxy_pass   http://127.0.0.1:8100;
+}
+
+3. navigate your web browser to http://127.0.0.1:8080/web/long-polling.html
+or http://127.0.0.1:8080/web/forever-iframe.html
+
+4. open a command line terminal, execute
+
+curl "http://127.0.0.1:8000/pub?cname=a&content=hello"
+</pre>
+
+	<h3>Server push messages:</h3>
+	<div id="output"></div>
+
+<script>
+var count = 0;
+var next_seq = 0;
+var last_script = null;
+
+function sub(seq){
+	// setTimeout to get rid of loading status in browser status bar
+	setTimeout(function(){
+		next_seq = seq | 0;
+		var body = document.getElementsByTagName('body')[0];
+		var script = document.createElement('script');
+		script.src = 'http://127.0.0.1:8080/icomet/poll?cname=a&cb=icomet_cb&seq=' + next_seq;
+		if(last_script){
+			body.removeChild(last_script);
+		}
+		body.appendChild(script);
+		last_script = script;
+	}, 0);
+}
+
+function icomet_cb(msg_data){
+	if(msg_data instanceof Array){
+		//
+	}else{
+		msg_data = [msg_data];
+	}
+	for(var k in msg_data){
+		var msg = msg_data[k];
+		if(msg.type != 'data'){
+			continue;
+		}
+		next_seq = parseInt(msg.seq) + 1;
+		count ++;
+		var output = document.getElementById('output');
+		var time = '' + (new Date());
+		output.innerHTML += count + '. ' + time + ': ' + msg.content + '<br/>';
+	}
+	// start next polling
+	sub(next_seq);
+}
+
+sub();
+</script>
+
+</body>
+</html>

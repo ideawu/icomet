@@ -57,7 +57,7 @@ void Subscriber::send_old_msgs(){
 		for(/**/; it != channel->msg_list.end(); it++, this->seq_next++){
 			std::string &msg = *it;
 			evbuffer_add_printf(buf,
-				"{\"type\":\"data\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
+				"{\"type\":\"data\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 				this->channel->name.c_str(),
 				this->seq_next,
 				msg.c_str());
@@ -103,7 +103,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	}
 	
 	evbuffer_add_printf(buf,
-		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
+		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type,
 		this->channel->name.c_str(),
 		seq,
@@ -137,7 +137,7 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 	}
 	
 	evbuffer_add_printf(buf,
-		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":\"%d\",\"content\":\"%s\"}",
+		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type,
 		"",
 		0,

@@ -1,10 +1,14 @@
-* 0.2.0 (2014-02-26)
-
-	Init this file.
-
-	New features:
-		-
+* 0.2.1 (2014-03-20)
+	* New features:
+		- Add web demos: long-polling.html forever-iframe.html
 	Incompatible changes:
+		- The data type of seq in response is changed to int(previousely string)
+
+* 0.2.0 (2014-02-26)
+	Init this file.
+	* New features:
 		-
-	Bug fixes:
+	* Incompatible changes:
+		-
+	* Bug fixes:
 		-
