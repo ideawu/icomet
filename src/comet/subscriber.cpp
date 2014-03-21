@@ -4,7 +4,7 @@
 #include "util/log.h"
 #include "server_config.h"
 
-static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><meta http-equiv='Cache-Control' content='no-store'><meta http-equiv='Cache-Control' content='no-cache'><meta http-equiv='Pragma' content='no-cache'><meta http-equiv=' Expires' content='Thu, 1 Jan 1970 00:00:00 GMT'><script type='text/javascript'>window.onError = null;try{ document.domain = (window.location.hostname.match(/^(d{1,3}.){3}d{1,3}$/)) ? window.location.hostname : window.location.hostname.split('.').slice(-2).join('.');}catch(e){};</script></head><body>";
+static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><meta http-equiv='Cache-Control' content='no-store'><meta http-equiv='Cache-Control' content='no-cache'><meta http-equiv='Pragma' content='no-cache'><meta http-equiv=' Expires' content='Thu, 1 Jan 1970 00:00:00 GMT'><script type='text/javascript'>window.onError = null;try{document.domain = window.location.hostname.split('.').slice(-2).join('.');}catch(e){};</script></head><body>";
 static std::string iframe_chunk_prefix = "<script>parent.icomet_cb(";
 static std::string iframe_chunk_suffix = ");</script>";
 
