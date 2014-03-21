@@ -33,6 +33,10 @@ curl "http://127.0.0.1:8000/pub?cname=a&content=hello"
 </pre>
 
 <script>
+try{
+	document.domain = window.location.hostname.split('.').slice(-2).join('.');
+}catch(e){};
+
 var count = 0;
 function icomet_cb(msg){
 	if(msg.type != 'data'){
