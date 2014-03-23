@@ -4,6 +4,7 @@ include build.mk
 .PHONY: all tools clean
 
 all:
+	mkdir -p logs
 	cd src/util; make
 	cd src/comet; make
 
