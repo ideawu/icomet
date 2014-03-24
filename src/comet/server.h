@@ -27,7 +27,6 @@ private:
 	LinkedList<Channel *> used_channels;
 	LinkedList<Channel *> free_channels;
 
-	Channel* get_channel(int cid);
 	Channel* get_channel_by_name(const std::string &name);
 	Channel* new_channel(const std::string &cname);
 	void free_channel(Channel *channel);
