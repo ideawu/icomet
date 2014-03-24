@@ -9,6 +9,7 @@
 #include "util/log.h"
 #include "util/list.h"
 
+#define USE_MEM_POOL 0
 
 class HttpQuery{
 private:
@@ -30,24 +31,19 @@ public:
 Server::Server(){
 	this->auth = AUTH_NONE;
 	subscribers = 0;
-	sub_pool.pre_alloc(1024);
 
+#if USE_MEM_POLL
 	channel_slots.resize(ServerConfig::max_channels);
 	for(int i=0; i<channel_slots.size(); i++){
 		Channel *channel = &channel_slots[i];
-		channel->id = i;
 		free_channels.push_back(channel);
 	}
+	sub_pool.pre_alloc(1024);
+#else
+#endif
 }
 
 Server::~Server(){
-}
-
-Channel* Server::get_channel(int cid){
-	if(cid < 0 || cid >= channel_slots.size()){
-		return NULL;
-	}
-	return &channel_slots[cid];
 }
 
 Channel* Server::get_channel_by_name(const std::string &cname){
@@ -60,18 +56,22 @@ Channel* Server::get_channel_by_name(const std::string &cname){
 }
 
 Channel* Server::new_channel(const std::string &cname){
-	if(free_channels.empty()){
+	if(used_channels.size >= ServerConfig::max_channels){
 		return NULL;
 	}
+#if USE_MEM_POLL
 	Channel *channel = free_channels.head;
 	assert(channel->subs.size == 0);
 	// first remove, then push_back, do not mistake the order
 	free_channels.remove(channel);
+#else
+	Channel *channel = new Channel();
+#endif
 	used_channels.push_back(channel);
 
 	channel->name = cname;
 	cname_channels[channel->name] = channel;
-	log_debug("new channel: %d, name: %s", channel->id, channel->name.c_str());
+	log_debug("new channel: %s", channel->name.c_str());
 	
 	add_presence(PresenceOnline, channel->name);
 	
@@ -84,15 +84,18 @@ Channel* Server::new_channel(const std::string &cname){
 
 void Server::free_channel(Channel *channel){
 	assert(channel->subs.size == 0);
-	log_debug("free channel: %d, name: %s", channel->id, channel->name.c_str());
+	log_debug("free channel: %s", channel->name.c_str());
 	add_presence(PresenceOffline, channel->name);
 
+	cname_channels.erase(channel->name);
 	// first remove, then push_back, do not mistake the order
 	used_channels.remove(channel);
+#if USE_MEM_POLL
 	free_channels.push_back(channel);
-
-	cname_channels.erase(channel->name);
 	channel->reset();
+#else
+	delete channel;
+#endif
 }
 
 int Server::check_timeout(){
@@ -219,8 +222,12 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	if(channel->idle < ServerConfig::channel_idles){
 		channel->idle = ServerConfig::channel_idles;
 	}
-	
+
+#if USE_MEM_POLL
 	Subscriber *sub = sub_pool.alloc();
+#else
+	Subscriber *sub = new Subscriber();
+#endif
 	sub->req = req;
 	sub->serv = this;
 	sub->type = sub_type;
@@ -249,7 +256,11 @@ int Server::sub_end(Subscriber *sub){
 		req->remote_host, req->remote_port,
 		channel->name.c_str(), channel->subs.size,
 		used_channels.size);
+#if USE_MEM_POLL
 	sub_pool.free(sub);
+#else
+	delete sub;
+#endif
 	return 0;
 }
 
@@ -287,8 +298,8 @@ int Server::pub(struct evhttp_request *req){
 			return 0;
 		}
 		int expires = ServerConfig::channel_timeout;
-		log_debug("auto sign channel on pub, cname:%s, cid:%d, t:%s, expires:%d",
-			cname.c_str(), channel->id, channel->token.c_str(), expires);
+		log_debug("auto sign channel on pub, cname:%s, t:%s, expires:%d",
+			cname.c_str(), channel->token.c_str(), expires);
 		channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 		/*
 		struct evbuffer *buf = evbuffer_new();
@@ -342,13 +353,13 @@ int Server::sign(struct evhttp_request *req){
 	}
 
 	if(channel->idle == -1){
-		log_debug("%s:%d sign cname:%s, cid:%d, t:%s, expires:%d",
+		log_debug("%s:%d sign cname:%s, t:%s, expires:%d",
 			req->remote_host, req->remote_port,
-			cname.c_str(), channel->id, channel->token.c_str(), expires);
+			cname.c_str(), channel->token.c_str(), expires);
 	}else{
-		log_debug("%s:%d re-sign cname:%s, cid:%d, t:%s, expires:%d",
+		log_debug("%s:%d re-sign cname:%s, t:%s, expires:%d",
 			req->remote_host, req->remote_port,
-			cname.c_str(), channel->id, channel->token.c_str(), expires);
+			cname.c_str(), channel->token.c_str(), expires);
 	}
 	channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 
