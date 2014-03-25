@@ -70,6 +70,10 @@ var comet = new iComet({
 http://www.ideawu.com/icomet/chat.html
 
 
+## iComet's role in a web system
+
+![icomet's role](http://www.ideawu.com/icomet/icomet-role.png)
+
 ## Nginx + icomet
 
 You can integrate icomet with nginx. If you are running you website on port ```80``` with domain ```www.test.com```. That is you visit your website home page with this url:
