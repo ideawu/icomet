@@ -70,7 +70,7 @@ var comet = new iComet({
 http://www.ideawu.com/icomet/chat.html
 
 
-## iComet's role in a web system
+## iComet's role in web system and mobile system
 
 ![icomet's role](http://www.ideawu.com/icomet/icomet-role.png)
 
