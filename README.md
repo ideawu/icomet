@@ -7,17 +7,13 @@ iComet is powerfull, can be used as the messaging server of many applications, s
 
 iComet provides a easy-to-use JavaScript library, with iComet js lib, you can build a web app that needs server-push feature very fast.
 
-## Supported Platforms and Browsers
 
-| Browser | Platform |
-| --------| -------- |
-| Safari  | iOS(iPhone, iPod, iPad), Mac |
-| Firefox | Windows, Mac |
-| Chrome  | Windows, Mac |
-| IE6, IE8 | Windows |
+## iComet's role in web system and mobile system
+
+![icomet's role](http://www.ideawu.com/icomet/icomet-role.png?t=1)
 
 
-## Usage
+## Compile and Run
 
 ```shell
 wget --no-check-certificate https://github.com/ideawu/icomet/archive/master.zip
@@ -31,7 +27,7 @@ curl -v "http://127.0.0.1:8100/sub?cname=12"
 curl -v "http://127.0.0.1:8000/pub?cname=12&content=hi"
 ```
 
-### JavaScript Library Usage
+## JavaScript Library Usage
 
 ```javascript
 var comet = new iComet({
@@ -44,6 +40,16 @@ var comet = new iComet({
     }
 });
 ```
+
+### Supported Platforms and Browsers
+
+| Browser | Platform |
+| --------| -------- |
+| Safari  | iOS(iPhone, iPod, iPad), Mac |
+| Firefox | Windows, Mac |
+| Chrome  | Windows, Mac |
+| IE6, IE8 | Windows |
+
 
 ## Memory Usage
 
@@ -68,11 +74,6 @@ var comet = new iComet({
 ## Live demo
 
 http://www.ideawu.com/icomet/chat.html
-
-
-## iComet's role in web system and mobile system
-
-![icomet's role](http://www.ideawu.com/icomet/icomet-role.png?t=1)
 
 ## Nginx + icomet
 
