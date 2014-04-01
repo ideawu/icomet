@@ -24,7 +24,7 @@ wget --no-check-certificate https://github.com/ideawu/icomet/archive/master.zip
 unzip master.zip
 cd icomet-master/
 make
-./comet-server comet.conf
+./comet-server icomet.conf
 
 curl -v "http://127.0.0.1:8100/sub?cname=12"
 # open another terminal
@@ -72,7 +72,7 @@ http://www.ideawu.com/icomet/chat.html
 
 ## iComet's role in web system and mobile system
 
-![icomet's role](http://www.ideawu.com/icomet/icomet-role.png)
+![icomet's role](http://www.ideawu.com/icomet/icomet-role.png?t=1)
 
 ## Nginx + icomet
 
