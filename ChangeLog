@@ -2,6 +2,8 @@
 	* New features:
 		- Use new/delete instead of custom memory pool
 		- Depricate Channel.id property
+	* Bug fixes:
+		- Fix bug on HttpQuery(evhttp_parse_query without evhttp_clear_headers)(2014-04-02)
 
 * 0.2.1 (2014-03-20)
 	* New features:
