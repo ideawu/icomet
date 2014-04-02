@@ -17,6 +17,9 @@ public:
 	HttpQuery(struct evhttp_request *req){
 		evhttp_parse_query(evhttp_request_get_uri(req), &params);
 	}
+	~HttpQuery(){
+		evhttp_clear_headers(&params);
+	}
 	int get_int(const char *name, int def){
 		const char *val = evhttp_find_header(&params, name);
 		return val? atoi(val) : def;
