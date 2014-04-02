@@ -18,6 +18,9 @@ public:
 	HttpQuery(struct evhttp_request *req){
 		evhttp_parse_query(evhttp_request_get_uri(req), &params);
 	}
+	~HttpQuery(){
+		evhttp_clear_headers(&params);
+	}
 	int get_int(const char *name, int def){
 		const char *val = evhttp_find_header(&params, name);
 		return val? atoi(val) : def;
@@ -44,6 +47,14 @@ Server::Server(){
 }
 
 Server::~Server(){
+	LinkedList<Channel *>::Iterator it = used_channels.iterator();
+	while(Channel *channel = it.next()){
+		LinkedList<Subscriber *>::Iterator it2 = channel->subs.iterator();
+		while(Subscriber *sub = it2.next()){
+			delete sub;
+		}
+		delete channel;
+	}
 }
 
 Channel* Server::get_channel_by_name(const std::string &cname){
@@ -83,7 +94,6 @@ Channel* Server::new_channel(const std::string &cname){
 }
 
 void Server::free_channel(Channel *channel){
-	assert(channel->subs.size == 0);
 	log_debug("free channel: %s", channel->name.c_str());
 	add_presence(PresenceOffline, channel->name);
 
@@ -94,6 +104,10 @@ void Server::free_channel(Channel *channel){
 	free_channels.push_back(channel);
 	channel->reset();
 #else
+	LinkedList<Subscriber *>::Iterator it2 = channel->subs.iterator();
+	while(Subscriber *sub = it2.next()){
+		delete sub;
+	}
 	delete channel;
 #endif
 }
@@ -328,6 +342,9 @@ int Server::pub(struct evhttp_request *req){
 	evbuffer_free(buf);
 
 	// push to subscribers
+	if(channel->idle < ServerConfig::channel_idles){
+		channel->idle = ServerConfig::channel_idles;
+	}
 	channel->send("data", content);
 	return 0;
 }
