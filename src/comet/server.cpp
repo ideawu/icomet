@@ -472,12 +472,12 @@ int Server::info(struct evhttp_request *req){
 		// TODO: if(!channel) 404
 		int onlines = channel? channel->subs.size : 0;
 		evbuffer_add_printf(buf,
-			"{cname: \"%s\", subscribers: %d}\n",
+			"{\"cname\": \"%s\", \"subscribers\": %d}\n",
 			cname.c_str(),
 			onlines);
 	}else{
 		evbuffer_add_printf(buf,
-			"{channels: %d, subscribers: %d}\n",
+			"{\"channels\": %d, \"subscribers\": %d}\n",
 			used_channels.size,
 			subscribers);
 	}

@@ -1,7 +1,9 @@
 * 0.2.2 (2014-03-24)
 	* New features:
 		- Use new/delete instead of custom memory pool
-		- Depricate Channel.id property
+		- Deprecate Channel.id property
+	* Incompatible changes:
+		- Wrap json object property names in quotes(2014-04-07)
 	* Bug fixes:
 		- Fix bug on HttpQuery(evhttp_parse_query without evhttp_clear_headers)(2014-04-02)
 
@@ -13,9 +15,4 @@
 
 * 0.2.0 (2014-02-26)
 	Init this file.
-	* New features:
-		-
-	* Incompatible changes:
-		-
-	* Bug fixes:
-		-
+
