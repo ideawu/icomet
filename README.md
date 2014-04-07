@@ -50,6 +50,10 @@ var comet = new iComet({
 | Chrome  | Windows, Mac |
 | IE6, IE8 | Windows |
 
+## Java/Android API
+
+[https://github.com/DuoZhang/iCometClient4j](https://github.com/DuoZhang/iCometClient4j)
+
 
 ## Memory Usage
 
