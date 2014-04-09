@@ -31,6 +31,7 @@ public:
 	Channel *prev;
 	Channel *next;
 
+	Server *serv;
 	LinkedList<Subscriber *> subs;
 
 	// idle < 0: offline
@@ -52,7 +53,6 @@ public:
 	
 	Channel();
 	~Channel();
-	void reset();
 	
 	inline int msg_seq_min() const{
 		if(msg_list.empty()){
@@ -69,6 +69,7 @@ public:
 	void del_subscriber(Subscriber *sub);
 	void send(const char *type, const char *content);
 	void clear();
+	void close();
 };
 
 #endif

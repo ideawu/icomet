@@ -9,8 +9,6 @@
 #include "util/log.h"
 #include "util/list.h"
 
-#define USE_MEM_POOL 0
-
 class HttpQuery{
 private:
 	struct evkeyvalq params;
@@ -70,26 +68,18 @@ Channel* Server::new_channel(const std::string &cname){
 	if(used_channels.size >= ServerConfig::max_channels){
 		return NULL;
 	}
-#if USE_MEM_POLL
-	Channel *channel = free_channels.head;
-	assert(channel->subs.size == 0);
-	// first remove, then push_back, do not mistake the order
-	free_channels.remove(channel);
-#else
-	Channel *channel = new Channel();
-#endif
-	used_channels.push_back(channel);
+	log_debug("new channel: %s", cname.c_str());
 
+	Channel *channel = new Channel();
+	channel->serv = this;
 	channel->name = cname;
-	cname_channels[channel->name] = channel;
-	log_debug("new channel: %s", channel->name.c_str());
+	channel->create_token();
 	
 	add_presence(PresenceOnline, channel->name);
-	
-	if(channel->token.empty()){
-		channel->create_token();
-	}
 
+	used_channels.push_back(channel);
+	cname_channels[channel->name] = channel;
+	
 	return channel;
 }
 
@@ -98,18 +88,13 @@ void Server::free_channel(Channel *channel){
 	add_presence(PresenceOffline, channel->name);
 
 	cname_channels.erase(channel->name);
-	// first remove, then push_back, do not mistake the order
 	used_channels.remove(channel);
-#if USE_MEM_POLL
-	free_channels.push_back(channel);
-	channel->reset();
-#else
+
 	LinkedList<Subscriber *>::Iterator it2 = channel->subs.iterator();
 	while(Subscriber *sub = it2.next()){
 		delete sub;
 	}
 	delete channel;
-#endif
 }
 
 int Server::check_timeout(){
@@ -143,24 +128,22 @@ void Server::add_presence(PresenceType type, const std::string &cname){
 	if(psubs.empty()){
 		return;
 	}
-	struct evbuffer *buf = evbuffer_new();
-	evbuffer_add_printf(buf, "%d %s\n", type, cname.c_str());
 
 	LinkedList<PresenceSubscriber *>::Iterator it = psubs.iterator();
 	while(PresenceSubscriber *psub = it.next()){
+		struct evbuffer *buf = evbuffer_new();
+		evbuffer_add_printf(buf, "%d %s\n", type, cname.c_str());
 		evhttp_send_reply_chunk(psub->req, buf);
-
+		evbuffer_free(buf);
 		//struct evbuffer *output = bufferevent_get_output(req->evcon->bufev);
 		//if(evbuffer_get_length(output) > MAX_OUTPUT_BUFFER){
 		//  close_presence_subscriber();
 		//}
 	}
-	
-	evbuffer_free(buf);
 }
 
 static void on_psub_disconnect(struct evhttp_connection *evcon, void *arg){
-	log_trace("presence subscriber disconnected");
+	log_info("presence subscriber disconnected");
 	PresenceSubscriber *psub = (PresenceSubscriber *)arg;
 	Server *serv = psub->serv;
 	serv->psub_end(psub);
@@ -173,7 +156,7 @@ int Server::psub(struct evhttp_request *req){
 	psub->req = req;
 	psub->serv = this;
 	psubs.push_back(psub);
-	log_debug("%s:%d psub, psubs: %d", req->remote_host, req->remote_port, psubs.size);
+	log_info("%s:%d psub, psubs: %d", req->remote_host, req->remote_port, psubs.size);
 
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	evhttp_connection_set_closecb(req->evcon, on_psub_disconnect, psub);
@@ -183,7 +166,7 @@ int Server::psub(struct evhttp_request *req){
 int Server::psub_end(PresenceSubscriber *psub){
 	struct evhttp_request *req = psub->req;
 	psubs.remove(psub);
-	log_debug("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
+	log_info("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
 	return 0;
 }
 
@@ -197,6 +180,20 @@ int Server::iframe(struct evhttp_request *req){
 
 int Server::stream(struct evhttp_request *req){
 	return this->sub(req, Subscriber::STREAM);
+}
+
+int Server::sub_end(Subscriber *sub){
+	struct evhttp_request *req = sub->req;
+	Channel *channel = sub->channel;
+	channel->del_subscriber(sub);
+	delete sub;
+	subscribers --;
+	log_debug("%s:%d sub_end %s, subs: %d, channels: %d, subscribers: %d",
+		req->remote_host, req->remote_port,
+		channel->name.c_str(), channel->subs.size,
+		used_channels.size,
+		subscribers);
+	return 0;
 }
 
 int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
@@ -237,13 +234,8 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 		channel->idle = ServerConfig::channel_idles;
 	}
 
-#if USE_MEM_POLL
-	Subscriber *sub = sub_pool.alloc();
-#else
 	Subscriber *sub = new Subscriber();
-#endif
 	sub->req = req;
-	sub->serv = this;
 	sub->type = sub_type;
 	sub->idle = 0;
 	sub->seq_next = seq;
@@ -252,29 +244,14 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	
 	channel->add_subscriber(sub);
 	subscribers ++;
-	log_debug("%s:%d sub %s, subs: %d, channels: %d",
-		req->remote_host, req->remote_port,
-		channel->name.c_str(), channel->subs.size,
-		used_channels.size);
 	sub->start();
 
-	return 0;
-}
-
-int Server::sub_end(Subscriber *sub){
-	struct evhttp_request *req = sub->req;
-	Channel *channel = sub->channel;
-	channel->del_subscriber(sub);
-	subscribers --;
-	log_debug("%s:%d sub_end %s, subs: %d, channels: %d",
+	log_debug("%s:%d sub %s, subs: %d, channels: %d, subscribers: %d",
 		req->remote_host, req->remote_port,
 		channel->name.c_str(), channel->subs.size,
-		used_channels.size);
-#if USE_MEM_POLL
-	sub_pool.free(sub);
-#else
-	delete sub;
-#endif
+		used_channels.size,
+		subscribers);
+
 	return 0;
 }
 
@@ -424,12 +401,9 @@ int Server::close(struct evhttp_request *req){
 	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
 	evhttp_send_reply(req, 200, "OK", buf);
 	evbuffer_free(buf);
-
-	// push to subscribers
-	if(channel->idle != -1){
-		channel->send("close", "");
-		this->free_channel(channel);
-	}
+	
+	channel->close();
+	this->free_channel(channel);
 
 	return 0;
 }
@@ -469,7 +443,6 @@ int Server::info(struct evhttp_request *req){
 	struct evbuffer *buf = evbuffer_new();
 	if(!cname.empty()){
 		Channel *channel = this->get_channel_by_name(cname);
-		// TODO: if(!channel) 404
 		int onlines = channel? channel->subs.size : 0;
 		evbuffer_add_printf(buf,
 			"{\"cname\": \"%s\", \"subscribers\": %d}\n",
@@ -477,7 +450,8 @@ int Server::info(struct evhttp_request *req){
 			onlines);
 	}else{
 		evbuffer_add_printf(buf,
-			"{\"channels\": %d, \"subscribers\": %d}\n",
+			"{\"version\": \"%s\", \"channels\": %d, \"subscribers\": %d}\n",
+			ICOMET_VERSION,
 			used_channels.size,
 			subscribers);
 	}

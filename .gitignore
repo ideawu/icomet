@@ -2,8 +2,9 @@ version.h
 build.h
 build.mk
 log.txt
-comet-server
+comet-server*
 online-server
+dev_icomet.conf
 *.dSYM
 *.pid
 *.o

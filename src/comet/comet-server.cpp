@@ -50,8 +50,8 @@ void check_pidfile();
 void remove_pidfile();
 
 void welcome(){
-	printf("icomet comet-server %s\n", ICOMET_VERSION);
-	printf("Copyright (c) 2013 ideawu.com\n");
+	printf("comet-server %s\n", ICOMET_VERSION);
+	printf("Copyright (c) 2013-2014 ideawu.com\n");
 	printf("\n");
 }
 

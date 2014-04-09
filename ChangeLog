@@ -1,3 +1,7 @@
+* 0.2.2.1 (2014-04-09)
+	* New features:
+		- Refactor source code
+
 * 0.2.2 (2014-03-24)
 	* New features:
 		- Use new/delete instead of custom memory pool

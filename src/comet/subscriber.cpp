@@ -8,21 +8,26 @@ static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' 
 static std::string iframe_chunk_prefix = "<script>parent.icomet_cb(";
 static std::string iframe_chunk_suffix = ");</script>";
 
+Subscriber::Subscriber(){
+	req = NULL;
+}
+
+Subscriber::~Subscriber(){
+}
+
 static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
 	log_debug("subscriber disconnected");
 	Subscriber *sub = (Subscriber *)arg;
-	Server *serv = sub->serv;
-	serv->sub_end(sub);
+	sub->channel->serv->sub_end(sub);
 }
 
 void Subscriber::start(){
+	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
 	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 	//evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	//evhttp_add_header(req->output_headers, "Expires", "0");
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
-	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
 
 	if(this->type == POLL){
 		//
@@ -82,9 +87,9 @@ void Subscriber::send_old_msgs(){
 }
 
 void Subscriber::close(){
-	evhttp_send_reply_end(this->req);
-	evhttp_connection_set_closecb(this->req->evcon, NULL, NULL);
-	this->serv->sub_end(this);
+	evhttp_send_reply_end(req);
+	evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+	channel->serv->sub_end(this);
 }
 
 void Subscriber::noop(){
@@ -104,10 +109,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
-		type,
-		this->channel->name.c_str(),
-		seq,
-		content);
+		type, this->channel->name.c_str(), seq, content);
 
 	if(this->type == POLL){
 		if(!this->callback.empty()){
@@ -138,10 +140,7 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 	
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
-		type,
-		"",
-		0,
-		content);
+		type, "", 0, content);
 
 	if(sub_type == POLL){
 		evbuffer_add_printf(buf, ");");

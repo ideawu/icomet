@@ -16,10 +16,12 @@ public:
 		IFRAME	= 2
 	};
 public:
+	Subscriber();
+	~Subscriber();
+	
 	Subscriber *prev;
 	Subscriber *next;
 	
-	Server *serv;
 	Channel *channel;
 	std::string callback;
 	int type;

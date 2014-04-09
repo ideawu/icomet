@@ -9,17 +9,12 @@
 #include "server_config.h"
 
 Channel::Channel(){
-	reset();
+	serv = NULL;
+	idle = 0;
+	seq_next = 0;
 }
 
 Channel::~Channel(){
-}
-
-void Channel::reset(){
-	seq_next = 0;
-	idle = -1;
-	token.clear();
-	msg_list.clear();
 }
 
 void Channel::add_subscriber(Subscriber *sub){
@@ -55,6 +50,14 @@ void Channel::create_token(){
 
 void Channel::clear(){
 	msg_list.clear();
+}
+
+void Channel::close(){
+	this->send("close", "");
+	LinkedList<Subscriber *>::Iterator it = subs.iterator();
+	while(Subscriber *sub = it.next()){
+		sub->close();
+	}
 }
 
 void Channel::send(const char *type, const char *content){
