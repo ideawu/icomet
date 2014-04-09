@@ -1,6 +1,7 @@
 #include "../config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <signal.h>
 #include <unistd.h>
 #include <evhttp.h>
@@ -22,7 +23,10 @@ void chunk_cb(struct evhttp_request *req, void *arg){
 }
 
 void http_request_done(struct evhttp_request *req, void *arg){
-	log_debug("request done");
+	static int num = 0;
+	if(++num % 1000 == 1){
+		log_debug("request done %d", num);
+	}
 }
 
 int main(int argc, char **argv){
@@ -33,6 +37,7 @@ int main(int argc, char **argv){
 	const char *host = argv[1];
 	int port = atoi(argv[2]);
 	
+	srand(time(NULL));
 	signal(SIGPIPE, SIG_IGN);
 
 	struct event_base *base = event_base_new();
@@ -58,7 +63,7 @@ int main(int argc, char **argv){
 		evhttp_request_set_chunked_cb(req, chunk_cb);
 
 		char buf[128];
-		snprintf(buf, sizeof(buf), "/sub?cname=%d", num);
+		snprintf(buf, sizeof(buf), "/sub?cname=%d", rand());
 		evhttp_make_request(conn, req, EVHTTP_REQ_GET, buf);
 		evhttp_connection_set_timeout(req->evcon, 864000);
 		event_base_loop(base, EVLOOP_NONBLOCK);
