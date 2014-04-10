@@ -23,7 +23,7 @@ static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
 
 void Subscriber::start(){
 	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
-	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
+	evhttp_add_header(req->output_headers, "Connection", "close");
 	//evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	//evhttp_add_header(req->output_headers, "Expires", "0");
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
