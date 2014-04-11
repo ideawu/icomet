@@ -282,7 +282,7 @@ int Server::pub(struct evhttp_request *req){
 	
 	Channel *channel = NULL;
 	channel = this->get_channel_by_name(cname);
-	if(!channel || channel->idle == -1){
+	if(!channel){
 		channel = this->new_channel(cname);
 		if(!channel){
 			evhttp_send_reply(req, 429, "Too Many Channels", NULL);
