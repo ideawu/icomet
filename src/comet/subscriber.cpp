@@ -11,8 +11,7 @@ static std::string iframe_chunk_suffix = ");</script>";
 static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
 	log_debug("subscriber disconnected");
 	Subscriber *sub = (Subscriber *)arg;
-	Server *serv = sub->serv;
-	serv->sub_end(sub);
+	sub->close();
 }
 
 void Subscriber::start(){
@@ -82,8 +81,10 @@ void Subscriber::send_old_msgs(){
 }
 
 void Subscriber::close(){
+	if(req->evcon){
+		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+	}
 	evhttp_send_reply_end(this->req);
-	evhttp_connection_set_closecb(this->req->evcon, NULL, NULL);
 	this->serv->sub_end(this);
 }
 
