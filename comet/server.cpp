@@ -312,6 +312,10 @@ int Server::sub(struct evhttp_request *req){
 
 int Server::sub_end(Subscriber *sub){
 	struct evhttp_request *req = sub->req;
+	if(req->evcon){
+		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+	}
+	evhttp_send_reply_end(req);
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
 	subscribers --;
