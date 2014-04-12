@@ -73,13 +73,13 @@ cd "$DIR"
 rm -f build.h
 echo "#ifndef ICOMET_CONFIG_H" >> build.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> build.h
+echo "#endif" >> build.h
 if [[ $TARGET_OS == CYGWIN* ]]; then
 	:
 else
 	echo "#include <stdlib.h>" >> build.h
 	echo "#include <jemalloc/jemalloc.h>" >> build.h
 fi
-echo "#endif" >> build.h
 
 
 ######### generate build.mk #########

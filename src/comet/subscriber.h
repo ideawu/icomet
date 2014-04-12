@@ -1,6 +1,7 @@
 #ifndef ICOMET_SUBSCRIBER_H
 #define ICOMET_SUBSCRIBER_H
 
+#include "../build.h"
 #include <string>
 #include <evhttp.h>
 

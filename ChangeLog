@@ -1,7 +1,9 @@
 * 0.2.2.1 (2014-04-09)
 	* New features:
 		- Refactor source code
-		- Disable keep-alive, it causes libevent memory leak(2014-04-10)
+	* Bug fixes:
+		- Fix memory leak bug, MUST call evhttp_send_reply_end in connection_closecb(2014-04-12)
+
 
 * 0.2.2 (2014-03-24)
 	* New features:

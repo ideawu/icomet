@@ -1,4 +1,3 @@
-#include "../build.h"
 #include <http-internal.h>
 #include <event2/http.h>
 #include <event2/buffer.h>
@@ -32,16 +31,6 @@ public:
 Server::Server(){
 	this->auth = AUTH_NONE;
 	subscribers = 0;
-
-#if USE_MEM_POLL
-	channel_slots.resize(ServerConfig::max_channels);
-	for(int i=0; i<channel_slots.size(); i++){
-		Channel *channel = &channel_slots[i];
-		free_channels.push_back(channel);
-	}
-	sub_pool.pre_alloc(1024);
-#else
-#endif
 }
 
 Server::~Server(){
@@ -116,8 +105,8 @@ int Server::check_timeout(){
 			if(++sub->idle <= ServerConfig::polling_idles){
 				continue;
 			}
-			sub->noop();
 			sub->idle = 0;
+			sub->noop();
 		}
 	}
 	//log_debug(">");
@@ -165,6 +154,10 @@ int Server::psub(struct evhttp_request *req){
 
 int Server::psub_end(PresenceSubscriber *psub){
 	struct evhttp_request *req = psub->req;
+	if(req->evcon){
+		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+	}
+	evhttp_send_reply_end(req);
 	psubs.remove(psub);
 	log_info("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
 	return 0;
@@ -183,16 +176,16 @@ int Server::stream(struct evhttp_request *req){
 }
 
 int Server::sub_end(Subscriber *sub){
+	subscribers --;
 	struct evhttp_request *req = sub->req;
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
-	delete sub;
-	subscribers --;
 	log_debug("%s:%d sub_end %s, subs: %d, channels: %d, subscribers: %d",
 		req->remote_host, req->remote_port,
 		channel->name.c_str(), channel->subs.size,
 		used_channels.size,
 		subscribers);
+	delete sub;
 	return 0;
 }
 
@@ -201,7 +194,6 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 		evhttp_send_reply(req, 405, "Method Not Allowed", NULL);
 		return 0;
 	}
-	bufferevent_enable(req->evcon->bufev, EV_READ);
 
 	HttpQuery query(req);
 	int seq = query.get_int("seq", 0);

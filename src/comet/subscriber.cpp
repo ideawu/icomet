@@ -3,6 +3,7 @@
 #include "server.h"
 #include "util/log.h"
 #include "server_config.h"
+#include <http-internal.h>
 
 static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><meta http-equiv='Cache-Control' content='no-store'><meta http-equiv='Cache-Control' content='no-cache'><meta http-equiv='Pragma' content='no-cache'><meta http-equiv=' Expires' content='Thu, 1 Jan 1970 00:00:00 GMT'><script type='text/javascript'>window.onError = null;try{document.domain = window.location.hostname.split('.').slice(-2).join('.');}catch(e){};</script></head><body>";
 static std::string iframe_chunk_prefix = "<script>parent.icomet_cb(";
@@ -18,12 +19,13 @@ Subscriber::~Subscriber(){
 static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
 	log_debug("subscriber disconnected");
 	Subscriber *sub = (Subscriber *)arg;
-	sub->channel->serv->sub_end(sub);
+	sub->close();
 }
 
 void Subscriber::start(){
+	bufferevent_enable(req->evcon->bufev, EV_READ);
 	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
-	evhttp_add_header(req->output_headers, "Connection", "close");
+	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 	//evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
 	//evhttp_add_header(req->output_headers, "Expires", "0");
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
@@ -87,8 +89,10 @@ void Subscriber::send_old_msgs(){
 }
 
 void Subscriber::close(){
+	if(req->evcon){
+		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+	}
 	evhttp_send_reply_end(req);
-	evhttp_connection_set_closecb(req->evcon, NULL, NULL);
 	channel->serv->sub_end(this);
 }
 

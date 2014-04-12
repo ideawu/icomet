@@ -1,6 +1,7 @@
 #ifndef ICOMET_CHANNEL_H
 #define ICOMET_CHANNEL_H
 
+#include "../build.h"
 #include <string>
 #include <vector>
 #include <evhttp.h>

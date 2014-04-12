@@ -1,13 +1,13 @@
 #ifndef ICOMET_SERVER_H
 #define ICOMET_SERVER_H
 
+#include "../build.h"
 #include <vector>
 #include <map>
 #include <list>
 #include <evhttp.h>
 #include <event2/http.h>
 #include "util/list.h"
-#include "util/objpool.h"
 #include "channel.h"
 #include "subscriber.h"
 #include "presence.h"
@@ -18,8 +18,6 @@
 class Server
 {
 private:
-	ObjPool<Subscriber> sub_pool;
-	std::vector<Channel> channel_slots;
 	// mapping cname(channel_name) to channel
 	std::map<std::string, Channel *> cname_channels;
 	
