@@ -229,7 +229,7 @@ var testing = location.href.indexOf('http') != 0;
 if (testing) {
 	// This is for test purpose only
 	var sign_url = 'http://' + admin_host + '/sign';
-	var pub_url = 'http://' + admin_host + '/pub?cb=?';
+	var pub_url = 'http://' + admin_host + '/push?cb=?';
 } else {
 	// In real world business, signUrl/pubUrl should link to an application server
 	// which will do neccessary authentication.

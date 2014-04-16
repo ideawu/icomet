@@ -59,20 +59,52 @@ void Channel::close(){
 	}
 }
 
-void Channel::send(const char *type, const char *content){
-	LinkedList<Subscriber *>::Iterator it = subs.iterator();
-	while(Subscriber *sub = it.next()){
-		sub->send_chunk(this->seq_next, type, content);
+static std::string json_encode(const char *str){
+	std::string ret;
+	int len = strlen(str);
+	for(int i=0; i<len; i++){
+		char c = str[i];
+		if(c == '"'){
+			ret.append("\\\"", 2);
+		}else if(c == '\\'){
+			ret.append("\\\\", 2);
+		}else if(c == '\r'){
+			ret.append("\\r", 2);
+		}else if(c == '\n'){
+			ret.append("\\n", 2);
+		}else{
+			ret.push_back(c);
+		}
 	}
+	return ret;
+}
 
+void Channel::send(const char *type, const char *content, bool encoded){
 	if(strcmp(type, "data") == 0){
-		msg_list.push_back(content);
+		std::string new_content;
+		if(encoded){
+			new_content = content;
+		}else{
+			new_content = json_encode(content);
+		}
+	
+		LinkedList<Subscriber *>::Iterator it = subs.iterator();
+		while(Subscriber *sub = it.next()){
+			sub->send_chunk(this->seq_next, type, new_content.c_str());
+		}
+
+		msg_list.push_back(new_content);
 		seq_next ++;
 		if(msg_list.size() >= ServerConfig::channel_buffer_size * 1.5){
 			std::vector<std::string>::iterator it;
 			it = msg_list.end() - ServerConfig::channel_buffer_size;
 			msg_list.assign(it, msg_list.end());
 			log_trace("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
+		}
+	}else{
+		LinkedList<Subscriber *>::Iterator it = subs.iterator();
+		while(Subscriber *sub = it.next()){
+			sub->send_chunk(this->seq_next, type, content);
 		}
 	}
 }

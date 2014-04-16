@@ -277,10 +277,8 @@ function iComet(config){
 			callback = function(){};
 		}
 		var data = {};
-		data.encoded = 1; // json_encoded without double quotes
 		data.cname = self.cname;
-		data.content = JSON.stringify(content);
-		data.content = data.content.substr(1, data.content.length - 2);
+		data.content = content;
 
 		$.getJSON(self.pub_url, data, callback);
 	}

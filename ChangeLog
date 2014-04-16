@@ -1,9 +1,12 @@
+* 0.2.2.2 (2014-04-15)
+	* New features:
+		- Add /push, to push content without json encoded, the server will do the encoding.
+
 * 0.2.2.1 (2014-04-09)
 	* New features:
 		- Refactor source code
 	* Bug fixes:
 		- Fix memory leak bug, MUST call evhttp_send_reply_end in connection_closecb(2014-04-12)
-
 
 * 0.2.2 (2014-03-24)
 	* New features:

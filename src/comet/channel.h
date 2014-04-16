@@ -68,7 +68,7 @@ public:
 	
 	void add_subscriber(Subscriber *sub);
 	void del_subscriber(Subscriber *sub);
-	void send(const char *type, const char *content);
+	void send(const char *type, const char *content, bool encoded=true);
 	void clear();
 	void close();
 };

@@ -261,7 +261,7 @@ int Server::ping(struct evhttp_request *req){
 	return 0;
 }
 
-int Server::pub(struct evhttp_request *req){
+int Server::pub(struct evhttp_request *req, bool encoded){
 	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
 		evhttp_send_reply(req, 405, "Invalid Method", NULL);
 		return 0;
@@ -314,7 +314,7 @@ int Server::pub(struct evhttp_request *req){
 	if(channel->idle < ServerConfig::channel_idles){
 		channel->idle = ServerConfig::channel_idles;
 	}
-	channel->send("data", content);
+	channel->send("data", content, encoded);
 	return 0;
 }
 

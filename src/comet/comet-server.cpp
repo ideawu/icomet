@@ -96,7 +96,12 @@ void ping_handler(struct evhttp_request *req, void *arg){
 
 void pub_handler(struct evhttp_request *req, void *arg){
 	CHECK_AUTH();
-	serv->pub(req);
+	serv->pub(req, true);
+}
+
+void push_handler(struct evhttp_request *req, void *arg){
+	CHECK_AUTH();
+	serv->pub(req, false);
 }
 
 void sign_handler(struct evhttp_request *req, void *arg){
@@ -168,6 +173,8 @@ int main(int argc, char **argv){
 		// content must be json encoded string without leading quote and trailing quote
 		// TODO: multi_pub
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
+		// pub raw content(not json encoded)
+		evhttp_set_cb(admin_http, "/push", push_handler, NULL);
 		// 分配通道, 返回通道的id和token
 		// /sign?cname=abc[&expires=60]
 		// wait 60 seconds to expire before any sub
