@@ -239,7 +239,7 @@ if (testing) {
 		path = '/' + n[1];
 	}
 	var sign_url = 'http://' + app_host + path + '/php/sign.php';
-	var pub_url = 'http://' + app_host + path + '/php/pub.php?cb=?';
+	var pub_url = 'http://' + app_host + path + '/php/push.php?cb=?';
 }
 var sub_url = 'http://' + icomet_host + '/sub';
 
