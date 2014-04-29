@@ -1,10 +1,9 @@
 <?php
 // application should check user login here
 
-$cb = urlencode($_GET['cb']);
 $cname = urlencode($_GET['cname']);
 $content = urlencode($_GET['content']);
-$url = "http://127.0.0.1:8000/push?cname=$cname&cb=$cb&content=$content";
+$url = "http://127.0.0.1:8000/push?cname=$cname&content=$content";
 $resp = http_get($url);
 echo $resp;
 

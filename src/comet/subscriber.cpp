@@ -41,6 +41,9 @@ void Subscriber::start(){
 	}
 	
 	// send buffered messages
+	if(this->seq_next == 0){
+		this->seq_next = channel->seq_next;
+	}
 	if(!channel->msg_list.empty() && channel->seq_next != this->seq_next){
 		this->send_old_msgs();
 	}
