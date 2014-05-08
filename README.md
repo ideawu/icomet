@@ -52,7 +52,8 @@ var comet = new iComet({
 
 ## Java/Android API
 
-[https://github.com/DuoZhang/iCometClient4j](https://github.com/DuoZhang/iCometClient4j)
+* [https://github.com/DuoZhang/iCometClient4j](https://github.com/DuoZhang/iCometClient4j)
+* [Android App Demo](https://github.com/ideawu/icomet-demos)
 
 
 ## Memory Usage
