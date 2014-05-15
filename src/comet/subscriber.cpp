@@ -136,7 +136,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	}
 }
 
-void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const char *type, const char *content){
+void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content){
 	struct evbuffer *buf = evbuffer_new();
 	
 	if(sub_type == POLL){
@@ -147,7 +147,7 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 	
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
-		type, "", 0, content);
+		type, cname.c_str(), 0, content);
 
 	if(sub_type == POLL){
 		evbuffer_add_printf(buf, ");");

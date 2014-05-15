@@ -207,18 +207,18 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 		channel = this->new_channel(cname);
 		if(!channel){
 			//evhttp_send_reply(req, 429, "Too many channels", NULL);
-			Subscriber::send_error_reply(sub_type, req, cb, "429", "Too many channels");
+			Subscriber::send_error_reply(sub_type, req, cb, cname, "429", "Too many channels");
 			return 0;
 		}
 	}
 	if(!channel || (this->auth == AUTH_TOKEN && channel->token != token)){
 		//evhttp_send_reply(req, 401, "Token error", NULL);
-		Subscriber::send_error_reply(sub_type, req, cb, "401", "Token error");
+		Subscriber::send_error_reply(sub_type, req, cb, cname, "401", "Token error");
 		return 0;
 	}
 	if(channel->subs.size >= ServerConfig::max_subscribers_per_channel){
 		//evhttp_send_reply(req, 429, "Too many subscribers", NULL);
-		Subscriber::send_error_reply(sub_type, req, cb, "429", "Too many subscribers");
+		Subscriber::send_error_reply(sub_type, req, cb, cname, "429", "Too many subscribers");
 		return 0;
 	}
 	

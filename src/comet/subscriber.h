@@ -40,7 +40,7 @@ public:
 	void noop();
 	void send_old_msgs();
 	
-	static void send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const char *type, const char *content);
+	static void send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content);
 };
 
 #endif
