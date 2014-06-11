@@ -107,3 +107,6 @@ Then, this url is used to subscribe to icomet channel xxx:
 http://www.test.com/icomet/sub?cname=xxx
 ```
 
+## Misc
+
+[icomet 源码分析](http://idning.github.io/icomet-cr.html)
