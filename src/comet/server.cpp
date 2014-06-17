@@ -180,11 +180,9 @@ int Server::sub_end(Subscriber *sub){
 	struct evhttp_request *req = sub->req;
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
-	log_debug("%s:%d sub_end %s, subs: %d, channels: %d, subscribers: %d",
+	log_debug("%s:%d sub_end %s, subs: %d,",
 		req->remote_host, req->remote_port,
-		channel->name.c_str(), channel->subs.size,
-		used_channels.size,
-		subscribers);
+		channel->name.c_str(), channel->subs.size);
 	delete sub;
 	return 0;
 }
@@ -238,11 +236,9 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	subscribers ++;
 	sub->start();
 
-	log_debug("%s:%d sub %s, subs: %d, channels: %d, subscribers: %d",
+	log_debug("%s:%d sub %s, seq: %d, subs: %d",
 		req->remote_host, req->remote_port,
-		channel->name.c_str(), channel->subs.size,
-		used_channels.size,
-		subscribers);
+		channel->name.c_str(), seq, channel->subs.size);
 
 	return 0;
 }
@@ -293,7 +289,9 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 		return 0;
 		*/
 	}
-	log_debug("channel: %s, subs: %d, pub content: %s", channel->name.c_str(), channel->subs.size, content);
+	log_debug("%s:%d pub %s, seq: %d, subs: %d, content: %s",
+		req->remote_host, req->remote_port,
+		channel->name.c_str(), channel->seq_next, channel->subs.size, content);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");

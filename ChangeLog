@@ -1,7 +1,8 @@
-* 0.2.2.2 (2014-04-15)
+* 0.2.2.2
 	* New features:
-		- Add /push, to push content without json encoded, the server will do the encoding.
+		- Add /push, to push content without json encoded, the server will do the encoding(2014-04-15)
 	* Incompatible changes:
+		- Change some logs(2014-06-17)
 		- Message seq number starts from 1, not 0. History messages are not sent if sub seq is 0(2014-04-28)
 
 * 0.2.2.1 (2014-04-09)
