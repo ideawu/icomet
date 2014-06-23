@@ -77,11 +77,11 @@ __Response:__
 
 	{type: "sign", cname: "a", seq: 0, token: "36289dcb55bc35aa6893f7557b7fc28c", expires: 30, sub_timeout: 10}
 
-### ```/pub``` Publish/Push message
+### ```/push``` Publish/Push message
 
 __Request:__
 
-	http://127.0.0.1:8000/pub?cname=$channel&content=$content
+	http://127.0.0.1:8000/push?cname=$channel&content=$content
 
 __Response:__
 
