@@ -1,5 +1,8 @@
 <?php
 // application should check user login here
+if(get_magic_quotes_gpc()){
+	$_GET['content'] = stripslashes($_GET['content']);
+}
 
 $cname = urlencode($_GET['cname']);
 $content = urlencode($_GET['content']);
