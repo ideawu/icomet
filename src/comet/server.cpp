@@ -317,6 +317,25 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 }
 
 
+int Server::broadcast(struct evhttp_request *req){
+	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
+		evhttp_send_reply(req, 405, "Invalid Method", NULL);
+		return 0;
+	}
+	
+	HttpQuery query(req);
+	const char *content = query.get_str("content", "");
+	
+	LinkedList<Channel *>::Iterator it = used_channels.iterator();
+	while(Channel *channel = it.next()){
+		if(channel->idle < ServerConfig::channel_idles){
+			channel->idle = ServerConfig::channel_idles;
+		}
+		channel->send("broadcast", content, false);
+	}
+	return 0;
+}
+
 int Server::sign(struct evhttp_request *req){
 	HttpQuery query(req);
 	int expires = query.get_int("expires", -1);

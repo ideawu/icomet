@@ -1,6 +1,7 @@
 * 0.2.2.2
 	* New features:
-		- Add /push, to push content without json encoded, the server will do the encoding(2014-04-15)
+		- Add /broadcast, broadcast message to all channels(2014-08-28)
+		- Add /push, to push message without json encoded, the server will do the encoding(2014-04-15)
 	* Incompatible changes:
 		- Change some logs(2014-06-17)
 		- Message seq number starts from 1, not 0. History messages are not sent if sub seq is 0(2014-04-28)

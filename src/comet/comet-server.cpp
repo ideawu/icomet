@@ -104,6 +104,11 @@ void push_handler(struct evhttp_request *req, void *arg){
 	serv->pub(req, false);
 }
 
+void broadcast_handler(struct evhttp_request *req, void *arg){
+	CHECK_AUTH();
+	serv->broadcast(req);
+}
+
 void sign_handler(struct evhttp_request *req, void *arg){
 	CHECK_AUTH();
 	serv->sign(req);
@@ -175,6 +180,7 @@ int main(int argc, char **argv){
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// pub raw content(not json encoded)
 		evhttp_set_cb(admin_http, "/push", push_handler, NULL);
+		evhttp_set_cb(admin_http, "/broadcast", broadcast_handler, NULL);
 		// 分配通道, 返回通道的id和token
 		// /sign?cname=abc[&expires=60]
 		// wait 60 seconds to expire before any sub
