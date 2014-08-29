@@ -333,6 +333,12 @@ int Server::broadcast(struct evhttp_request *req){
 		}
 		channel->send("broadcast", content, false);
 	}
+
+	struct evbuffer *buf = evbuffer_new();
+	evbuffer_add_printf(buf, "ok\n");
+	evhttp_send_reply(req, 200, "OK", buf);
+	evbuffer_free(buf);
+
 	return 0;
 }
 
