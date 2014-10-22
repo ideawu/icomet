@@ -4,7 +4,7 @@
 #include <string>
 #include "util/config.h"
 
-// initialized in comet-server.cpp
+// initialized in icomet-server.cpp
 class ServerConfig{
 public:
 	static int max_channels;

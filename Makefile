@@ -7,7 +7,7 @@ all:
 	mkdir -p logs
 	cd src/util; make
 	cd src/comet; make
-	cp -f comet-server comet-server-`cat version`
+	cp -f icomet-server icomet-server-`cat version`
 
 tools:
 	cd tools; make
@@ -16,7 +16,7 @@ clean:
 	rm -f *.exe.stackdump
 	cd src/util; make clean
 	cd src/comet; make clean
-	rm -f comet-server-*
+	rm -f icomet-server-*
 
 clean_all: clean
 	cd $(JEMALLOC_PATH); make clean

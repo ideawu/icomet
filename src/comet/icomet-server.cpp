@@ -50,14 +50,14 @@ void check_pidfile();
 void remove_pidfile();
 
 void welcome(){
-	printf("comet-server %s\n", ICOMET_VERSION);
+	printf("icomet-server %s\n", ICOMET_VERSION);
 	printf("Copyright (c) 2013-2014 ideawu.com\n");
 	printf("\n");
 }
 
 void usage(int argc, char **argv){
 	printf("Usage:\n");
-	printf("    %s [-d] /path/to/comet.conf\n", argv[0]);
+	printf("    %s [-d] /path/to/icomet.conf\n", argv[0]);
 	printf("Options:\n");
 	printf("    -d    run as daemon\n");
 }
@@ -293,7 +293,7 @@ int main(int argc, char **argv){
 	}
 
 	write_pidfile();
-	log_info("icomet started");
+	log_info("icomet-server started");
 	event_base_dispatch(evbase);
 	remove_pidfile();
 
@@ -385,7 +385,7 @@ void init(int argc, char **argv){
 		daemonize();
 	}
 
-	log_info("starting icomet %s...", ICOMET_VERSION);
+	log_info("starting icomet-server %s...", ICOMET_VERSION);
 	log_info("config file: %s", conf_file);
 	log_info("log_level       : %s", conf->get_str("logger.level"));
 	log_info("log_output      : %s", log_output.c_str());
