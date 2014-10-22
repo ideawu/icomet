@@ -71,12 +71,14 @@ var comet = new iComet({
 ## Run the chat demo
 
 1. Compile and start icomet server
-1. Drag and drop the file demos/web/chat.html into one web browser
-1. Drag and drop the file demos/web/chat.html into another different web browser
+1. Drag and drop the file demo/web/chat.html into one web browser
+1. Drag and drop the file demo/web/chat.html into another different web browser
 1. Start chatting!
 
 
 ## Live demo
+
+This live demo is based on https://github.com/ideawu/icomet-demos, which has buddy list, chat history, and other features.
 
 http://www.ideawu.com/icomet/chat.html
 
