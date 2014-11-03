@@ -177,11 +177,9 @@ int Server::stream(struct evhttp_request *req){
 
 int Server::sub_end(Subscriber *sub){
 	subscribers --;
-	struct evhttp_request *req = sub->req;
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
-	log_debug("%s:%d sub_end %s, subs: %d,",
-		req->remote_host, req->remote_port,
+	log_debug("sub_end %s, subs: %d,",
 		channel->name.c_str(), channel->subs.size);
 	delete sub;
 	return 0;
@@ -211,6 +209,8 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	}
 	if(!channel || (this->auth == AUTH_TOKEN && channel->token != token)){
 		//evhttp_send_reply(req, 401, "Token error", NULL);
+		log_info("%s:%d sub %s, token: %s, token error!",
+			req->remote_host, req->remote_port, cname.c_str(), token);
 		Subscriber::send_error_reply(sub_type, req, cb, cname, "401", "Token error");
 		return 0;
 	}
