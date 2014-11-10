@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2014 The icomet Authors. All rights reserved.
+Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 */
@@ -33,6 +33,11 @@ int ServerConfig::polling_idles					= 0;
 int ServerConfig::channel_buffer_size			= 0;
 int ServerConfig::channel_timeout				= 0;
 int ServerConfig::channel_idles					= 0;
+/*
+std::string ServerConfig::iframe_header			= "";
+std::string ServerConfig::iframe_chunk_prefix	= "";
+std::string ServerConfig::iframe_chunk_suffix	= "";
+*/
 
 Server *serv = NULL;
 Config *conf = NULL;
@@ -66,8 +71,16 @@ void signal_cb(evutil_socket_t sig, short events, void *user_data){
 	event_base_loopbreak(evbase);
 }
 
-void sub_handler(struct evhttp_request *req, void *arg){
-	serv->sub(req);
+void poll_handler(struct evhttp_request *req, void *arg){
+	serv->poll(req);
+}
+
+void iframe_handler(struct evhttp_request *req, void *arg){
+	serv->iframe(req);
+}
+
+void stream_handler(struct evhttp_request *req, void *arg){
+	serv->stream(req);
 }
 
 void ping_handler(struct evhttp_request *req, void *arg){
@@ -98,6 +111,11 @@ void sign_handler(struct evhttp_request *req, void *arg){
 void close_handler(struct evhttp_request *req, void *arg){
 	CHECK_AUTH();
 	serv->close(req);
+}
+
+void clear_handler(struct evhttp_request *req, void *arg){
+	CHECK_AUTH();
+	serv->clear(req);
 }
 
 void info_handler(struct evhttp_request *req, void *arg){
@@ -132,27 +150,38 @@ int main(int argc, char **argv){
 	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
 	ServerConfig::max_subscribers_per_channel = conf->get_num("front.max_subscribers_per_channel");
-	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
 	ServerConfig::channel_buffer_size = conf->get_num("front.channel_buffer_size");
-	ServerConfig::channel_timeout = 0.5 * ServerConfig::polling_timeout;
+	ServerConfig::channel_timeout = conf->get_num("front.channel_timeout");
+	ServerConfig::polling_timeout = conf->get_num("front.polling_timeout");
+	if(ServerConfig::polling_timeout <= 0){
+		log_fatal("Invalid polling_timeout!");
+		exit(0);
+	}
+	if(ServerConfig::channel_timeout <= 0){
+		ServerConfig::channel_timeout = (int)(0.5 * ServerConfig::polling_timeout);
+	}
 	
 	ServerConfig::polling_idles = ServerConfig::polling_timeout / CHANNEL_CHECK_INTERVAL;
 	ServerConfig::channel_idles = ServerConfig::channel_timeout / CHANNEL_CHECK_INTERVAL;
-		
+	
 	serv = new Server();
 	ip_filter = new IpFilter();
 
 	{
 		// /pub?cname=abc&content=hi
 		// content must be json encoded string without leading quote and trailing quote
+		// TODO: multi_pub
 		evhttp_set_cb(admin_http, "/pub", pub_handler, NULL);
 		// 分配通道, 返回通道的id和token
-		// /sign?cname=abc&[expires=60]
+		// /sign?cname=abc[&expires=60]
 		// wait 60 seconds to expire before any sub
 		evhttp_set_cb(admin_http, "/sign", sign_handler, NULL);
 		// 销毁通道
 		// /close?cname=abc
 		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
+		// 销毁通道
+		// /clear?cname=abc
+		evhttp_set_cb(admin_http, "/clear", clear_handler, NULL);
 		// 获取通道的信息
 		// /info?[cname=abc], or TODO: /info?cname=a,b,c
 		evhttp_set_cb(admin_http, "/info", info_handler, NULL);
@@ -196,6 +225,7 @@ int main(int argc, char **argv){
 			}
 		}
 	}
+	
 	{
 		Config *cc = (Config *)conf->get("admin");
 		if(cc != NULL){
@@ -213,8 +243,13 @@ int main(int argc, char **argv){
 	}
 
 	{
-		// TODO: sub?cname=abc&cb=jsonp&token=&seq=123&noop=123
-		evhttp_set_cb(front_http, "/sub", sub_handler, NULL);
+		// /sub?cname=abc&cb=jsonp&token=&seq=123&noop=123
+		evhttp_set_cb(front_http, "/sub", poll_handler, NULL);
+		evhttp_set_cb(front_http, "/poll", poll_handler, NULL);
+		// forever iframe
+		evhttp_set_cb(front_http, "/iframe", iframe_handler, NULL);
+		// http endless chunk
+		evhttp_set_cb(front_http, "/stream", stream_handler, NULL);
 		// /ping?cb=jsonp
 		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);
 
@@ -241,12 +276,13 @@ int main(int argc, char **argv){
 		log_info("    max_channels %d", ServerConfig::max_channels);
 		log_info("    max_subscribers_per_channel %d", ServerConfig::max_subscribers_per_channel);
 		log_info("    channel_buffer_size %d", ServerConfig::channel_buffer_size);
+		log_info("    channel_timeout %d", ServerConfig::channel_timeout);
 		log_info("    polling_timeout %d", ServerConfig::polling_timeout);
 		if(auth == "token"){
 			serv->auth = Server::AUTH_TOKEN;
 		}
 	}
-	
+
 	write_pidfile();
 	log_info("icomet started");
 	event_base_dispatch(evbase);
