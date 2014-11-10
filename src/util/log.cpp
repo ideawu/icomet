@@ -1,3 +1,8 @@
+/*
+Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+*/
 #include "log.h"
 
 static Logger logger;
@@ -147,6 +152,9 @@ int Logger::get_level(const char *levelname){
 	}
 	if(strcmp("fatal", levelname) == 0){
 		return LEVEL_FATAL;
+	}
+	if(strcmp("none", levelname) == 0){
+		return LEVEL_NONE;
 	}
 	return LEVEL_DEBUG;
 }

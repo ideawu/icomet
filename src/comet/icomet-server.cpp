@@ -1,3 +1,8 @@
+/*
+Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+*/
 #include "../build.h"
 #include <stdio.h>
 #include <signal.h>
@@ -33,6 +38,20 @@ std::string ServerConfig::iframe_header			= "";
 std::string ServerConfig::iframe_chunk_prefix	= "";
 std::string ServerConfig::iframe_chunk_suffix	= "";
 */
+
+static inline
+int parse_ip_port(const char *addr, std::string *ip, int *port){
+	char *sep = (char *)strchr(addr, ':');
+	if(!sep){
+		return -1;
+	}
+	ip->assign(addr, sep - addr);
+	*port = atoi(sep + 1);
+	if(*port < 0 || *port > 65535){
+		return -1;
+	}
+	return 0;
+}
 
 Server *serv = NULL;
 Config *conf = NULL;
