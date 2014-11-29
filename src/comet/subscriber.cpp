@@ -39,10 +39,9 @@ void Subscriber::start(){
 	if(this->type == POLL){
 		//
 	}else if(this->type == IFRAME){
-		struct evbuffer *buf = evbuffer_new();
+		struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 		evbuffer_add_printf(buf, "%s\n", iframe_header.c_str());
 		evhttp_send_reply_chunk(this->req, buf);
-		evbuffer_free(buf);
 	}
 	
 	// send buffered messages
@@ -63,7 +62,7 @@ void Subscriber::send_old_msgs(){
 	log_debug("send old msg: [%d, %d]", this->seq_next, channel->seq_next - 1);
 	it -= (channel->seq_next - this->seq_next);
 
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 	if(this->type == POLL){
 		if(!this->callback.empty()){
 			evbuffer_add_printf(buf, "%s(", this->callback.c_str());
@@ -93,7 +92,6 @@ void Subscriber::send_old_msgs(){
 			this->send_chunk(this->seq_next, "data", msg.c_str());
 		}
 	}
-	evbuffer_free(buf);
 }
 
 void Subscriber::close(){
@@ -109,7 +107,7 @@ void Subscriber::noop(){
 }
 
 void Subscriber::send_chunk(int seq, const char *type, const char *content){
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 	
 	if(this->type == POLL){
 		if(!this->callback.empty()){
@@ -133,7 +131,6 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 
 	evbuffer_add_printf(buf, "\n");
 	evhttp_send_reply_chunk(this->req, buf);
-	evbuffer_free(buf);
 
 	this->idle = 0;
 	if(this->type == POLL){
@@ -142,7 +139,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 }
 
 void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content){
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	
 	if(sub_type == POLL){
 		evbuffer_add_printf(buf, "%s(", cb);
@@ -162,6 +159,5 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 
 	evbuffer_add_printf(buf, "\n");
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
-	evbuffer_free(buf);
 }
 

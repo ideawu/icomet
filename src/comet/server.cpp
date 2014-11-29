@@ -125,10 +125,9 @@ void Server::add_presence(PresenceType type, const std::string &cname){
 
 	LinkedList<PresenceSubscriber *>::Iterator it = psubs.iterator();
 	while(PresenceSubscriber *psub = it.next()){
-		struct evbuffer *buf = evbuffer_new();
+		struct evbuffer *buf = evhttp_request_get_output_buffer(psub->req);
 		evbuffer_add_printf(buf, "%d %s\n", type, cname.c_str());
 		evhttp_send_reply_chunk(psub->req, buf);
-		evbuffer_free(buf);
 		//struct evbuffer *output = bufferevent_get_output(req->evcon->bufev);
 		//if(evbuffer_get_length(output) > MAX_OUTPUT_BUFFER){
 		//  close_presence_subscriber();
@@ -252,13 +251,12 @@ int Server::ping(struct evhttp_request *req){
 	HttpQuery query(req);
 	const char *cb = query.get_str("cb", DEFAULT_JSONP_CALLBACK);
 
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer * buf = evhttp_request_get_output_buffer(req);
 	evbuffer_add_printf(buf,
 		"%s({\"type\":\"ping\",\"sub_timeout\":%d});\n",
 		cb,
 		ServerConfig::polling_timeout);
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
-	evbuffer_free(buf);
 	return 0;
 }
 
@@ -286,11 +284,10 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 			cname.c_str(), channel->token.c_str(), expires);
 		channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 		/*
-		struct evbuffer *buf = evbuffer_new();
+		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 		log_trace("cname[%s] not connected, not pub content: %s", cname.c_str(), content);
 		evbuffer_add_printf(buf, "cname[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
-		evbuffer_free(buf);
 		return 0;
 		*/
 	}
@@ -300,7 +297,7 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer * buf = evhttp_request_get_output_buffer(req);
 	if(cb){
 		evbuffer_add_printf(buf, "%s(", cb);
 	}
@@ -311,7 +308,6 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 		evbuffer_add(buf, "\n", 1);
 	}
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	// push to subscribers
 	if(channel->idle < ServerConfig::channel_idles){
@@ -339,10 +335,9 @@ int Server::broadcast(struct evhttp_request *req){
 		channel->send("broadcast", content, false);
 	}
 
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	evbuffer_add_printf(buf, "ok\n");
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	return 0;
 }
@@ -378,7 +373,7 @@ int Server::sign(struct evhttp_request *req){
 	channel->idle = expires/CHANNEL_CHECK_INTERVAL;
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	if(cb){
 		evbuffer_add_printf(buf, "%s(", cb);
 	}
@@ -395,7 +390,6 @@ int Server::sign(struct evhttp_request *req){
 		evbuffer_add(buf, "\n", 1);
 	}
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	return 0;
 }
@@ -407,20 +401,18 @@ int Server::close(struct evhttp_request *req){
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel){
 		log_warn("channel %s not found", cname.c_str());
-		struct evbuffer *buf = evbuffer_new();
+		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 		evbuffer_add_printf(buf, "channel[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
-		evbuffer_free(buf);
 		return 0;
 	}
 	log_debug("close channel: %s, subs: %d", cname.c_str(), channel->subs.size);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 	
 	channel->close();
 	this->free_channel(channel);
@@ -435,20 +427,18 @@ int Server::clear(struct evhttp_request *req){
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel){
 		log_warn("channel %s not found", cname.c_str());
-		struct evbuffer *buf = evbuffer_new();
+		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 		evbuffer_add_printf(buf, "channel[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
-		evbuffer_free(buf);
 		return 0;
 	}
 	log_debug("clear channel: %s, subs: %d", cname.c_str(), channel->subs.size);
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	evbuffer_add_printf(buf, "ok %d\n", channel->seq_next);
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	channel->clear();
 
@@ -460,7 +450,7 @@ int Server::info(struct evhttp_request *req){
 	std::string cname = query.get_str("cname", "");
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	if(!cname.empty()){
 		Channel *channel = this->get_channel_by_name(cname);
 		int onlines = channel? channel->subs.size : 0;
@@ -476,7 +466,6 @@ int Server::info(struct evhttp_request *req){
 			subscribers);
 	}
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	return 0;
 }
@@ -486,7 +475,8 @@ int Server::check(struct evhttp_request *req){
 	std::string cname = query.get_str("cname", "");
 
 	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
-	struct evbuffer *buf = evbuffer_new();
+
+	struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 	Channel *channel = this->get_channel_by_name(cname);
 	if(channel && channel->idle != -1){
 		evbuffer_add_printf(buf, "{\"%s\": 1}\n", cname.c_str());
@@ -494,7 +484,6 @@ int Server::check(struct evhttp_request *req){
 		evbuffer_add_printf(buf, "{}\n");
 	}
 	evhttp_send_reply(req, 200, "OK", buf);
-	evbuffer_free(buf);
 
 	return 0;
 }
