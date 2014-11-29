@@ -131,7 +131,7 @@ function iComet(config){
 		if(msg.type == 'data'){
 			self.last_sub_time = (new Date()).getTime();
 			if(msg.seq != self.data_seq){
-				if(msg.seq == 0){
+				if(msg.seq == 0 || msg.seq == 1){
 					self.log('server restarted');
 					// TODO: lost_cb(msg);
 					self.sub_cb(msg);
