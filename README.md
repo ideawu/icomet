@@ -21,6 +21,8 @@ unzip master.zip
 cd icomet-master/
 make
 ./comet-server icomet.conf
+# stop
+./comet-server icomet.conf -s stop
 
 curl -v "http://127.0.0.1:8100/sub?cname=12"
 # open another terminal
