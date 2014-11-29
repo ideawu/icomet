@@ -48,6 +48,8 @@ public:
 	std::string name;
 	std::string token;
 	
+	int presence_idle;
+	
 	// TODO:
 	/*
 	struct Message{

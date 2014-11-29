@@ -95,6 +95,11 @@ int Server::check_timeout(){
 	//log_debug("<");
 	LinkedList<Channel *>::Iterator it = used_channels.iterator();
 	while(Channel *channel = it.next()){
+		if(++channel->presence_idle >= ServerConfig::channel_timeout){
+			channel->presence_idle = 0;
+			this->add_presence(PresenceOnline, channel->name);
+		}
+
 		if(channel->subs.size == 0){
 			if(--channel->idle < 0){
 				this->free_channel(channel);

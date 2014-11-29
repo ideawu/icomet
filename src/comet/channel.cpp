@@ -16,6 +16,7 @@ Channel::Channel(){
 	serv = NULL;
 	idle = 0;
 	seq_next = 1;
+	presence_idle = 0;
 }
 
 Channel::~Channel(){

@@ -1,3 +1,7 @@
+* 0.2.3
+	* New features:
+		- Add icomet-server start options(2014-11-29)
+		- Send periodical presence online events(2014-11-29)
 * 0.2.2.2
 	* New features:
 		- Add /broadcast, broadcast message to all channels(2014-08-28)
