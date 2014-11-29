@@ -1,12 +1,10 @@
 /*
-Copyright (c) 2012-2014 The icomet Authors. All rights reserved.
+Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 */
 #ifndef UTIL_DAEMON_H
 #define UTIL_DAEMON_H
-
-#include <unistd.h>
 
 int daemonize(const char *dir=NULL){
 	switch(fork()){

@@ -3,8 +3,19 @@ BASE_DIR=`pwd`
 TARGET_OS=`uname -s`
 JEMALLOC_PATH="$BASE_DIR/deps/jemalloc-3.4.0"
 LIBEVENT_PATH="$BASE_DIR/deps/libevent-2.0.21-stable"
-C=gcc
-CC=g++
+
+if test -z "$TARGET_OS"; then
+	TARGET_OS=`uname -s`
+fi
+if test -z "$MAKE"; then
+	MAKE=make
+fi
+if test -z "$CC"; then
+	CC=gcc
+fi
+if test -z "$CXX"; then
+	CXX=g++
+fi
 
 case "$TARGET_OS" in
     Darwin)

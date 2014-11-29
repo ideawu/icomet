@@ -53,6 +53,19 @@ int parse_ip_port(const char *addr, std::string *ip, int *port){
 	return 0;
 }
 
+struct AppArgs{
+	bool is_daemon;
+	std::string pidfile;
+	std::string conf_file;
+	std::string start_opt;
+
+	AppArgs(){
+		is_daemon = false;
+		start_opt = "start";
+	}
+};
+
+AppArgs app_args;
 Server *serv = NULL;
 Config *conf = NULL;
 IpFilter *ip_filter = NULL;
@@ -63,23 +76,16 @@ struct event *timer_event = NULL;
 struct event *sigint_event = NULL;
 struct event *sigterm_event = NULL;
 
+void welcome();
+void usage(int argc, char **argv);
+void parse_args(int argc, char **argv);
 void init(int argc, char **argv);
-void write_pidfile();
+
+int read_pid();
+void write_pid();
 void check_pidfile();
 void remove_pidfile();
-
-void welcome(){
-	printf("icomet-server %s\n", ICOMET_VERSION);
-	printf("Copyright (c) 2013-2014 ideawu.com\n");
-	printf("\n");
-}
-
-void usage(int argc, char **argv){
-	printf("Usage:\n");
-	printf("    %s [-d] /path/to/icomet.conf\n", argv[0]);
-	printf("Options:\n");
-	printf("    -d    run as daemon\n");
-}
+void kill_process();
 
 void signal_cb(evutil_socket_t sig, short events, void *user_data){
 	event_base_loopbreak(evbase);
@@ -171,6 +177,7 @@ void accept_error_cb(struct evconnlistener *lis, void *ptr){
 
 int main(int argc, char **argv){
 	welcome();
+	parse_args(argc, argv);
 	init(argc, argv);
 	
 	ServerConfig::max_channels = conf->get_num("front.max_channels");
@@ -311,7 +318,7 @@ int main(int argc, char **argv){
 		}
 	}
 
-	write_pidfile();
+	write_pid();
 	log_info("icomet-server started");
 	event_base_dispatch(evbase);
 	remove_pidfile();
@@ -331,11 +338,56 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-void init(int argc, char **argv){
-	if(argc < 2){
-		usage(argc, argv);
-		exit(0);
+void welcome(){
+	printf("icomet-server %s\n", ICOMET_VERSION);
+	printf("Copyright (c) 2013-2014 ideawu.com\n");
+	printf("\n");
+}
+
+void usage(int argc, char **argv){
+	printf("Usage:\n");
+	printf("    %s [-d] /path/to/icomet.conf [-s start|stop|restart]\n", argv[0]);
+	printf("Options:\n");
+	printf("    -d    run as daemon\n");
+	printf("    -s    option to start|stop|restart the server\n");
+	printf("    -h    show this message\n");
+}
+
+void parse_args(int argc, char **argv){
+	for(int i=1; i<argc; i++){
+		std::string arg = argv[i];
+		if(arg == "-d"){
+			app_args.is_daemon = true;
+		}else if(arg == "-v"){
+			exit(0);
+		}else if(arg == "-h"){
+			usage(argc, argv);
+			exit(0);
+		}else if(arg == "-s"){
+			if(argc > i + 1){
+				i ++;
+				app_args.start_opt = argv[i];
+			}else{
+				usage(argc, argv);
+				exit(1);
+			}
+			if(app_args.start_opt != "start" && app_args.start_opt != "stop" && app_args.start_opt != "restart"){
+				usage(argc, argv);
+				fprintf(stderr, "Error: bad argument: '%s'\n", app_args.start_opt.c_str());
+				exit(1);
+			}
+		}else{
+			app_args.conf_file = argv[i];
+		}
 	}
+
+	if(app_args.conf_file.empty()){
+		usage(argc, argv);
+		exit(1);
+	}
+}
+
+void init(int argc, char **argv){
 	signal(SIGPIPE, SIG_IGN);
 
 	{
@@ -347,39 +399,33 @@ void init(int argc, char **argv){
 		}
 	}
 
-	bool is_daemon = false;
-	const char *conf_file = NULL;
-	for(int i=1; i<argc; i++){
-		if(strcmp(argv[i], "-d") == 0){
-			is_daemon = true;
-		}else{
-			conf_file = argv[i];
-		}
+	if(!is_file(app_args.conf_file.c_str())){
+		fprintf(stderr, "'%s' is not a file or not exists!\n", app_args.conf_file.c_str());
+		exit(1);
 	}
-
-	if(conf_file == NULL){
-		usage(argc, argv);
-		exit(0);
-	}
-
-	if(!is_file(conf_file)){
-		fprintf(stderr, "'%s' is not a file or not exists!\n", conf_file);
-		exit(0);
-	}
-
-	conf = Config::load(conf_file);
+	conf = Config::load(app_args.conf_file.c_str());
 	if(!conf){
-		fprintf(stderr, "error loading conf file: '%s'\n", conf_file);
-		exit(0);
+		fprintf(stderr, "error loading conf file: '%s'\n", app_args.conf_file.c_str());
+		exit(1);
 	}
 	{
-		std::string conf_dir = real_dirname(conf_file);
+		std::string conf_dir = real_dirname(app_args.conf_file.c_str());
 		if(chdir(conf_dir.c_str()) == -1){
 			fprintf(stderr, "error chdir: %s\n", conf_dir.c_str());
-			exit(0);
+			exit(1);
 		}
 	}
 
+	app_args.pidfile = conf->get_str("pidfile");
+
+	if(app_args.start_opt == "stop"){
+		kill_process();
+		exit(0);
+	}
+	if(app_args.start_opt == "restart"){
+		kill_process();
+	}
+	check_pidfile();
 
 	std::string log_output;
 	int log_rotate_size = 0;
@@ -399,17 +445,15 @@ void init(int argc, char **argv){
 		}
 	}
 
-	check_pidfile();
-	if(is_daemon){
-		daemonize();
-	}
-
 	log_info("starting icomet-server %s...", ICOMET_VERSION);
-	log_info("config file: %s", conf_file);
+	log_info("conf_file       : %s", app_args.conf_file.c_str());
 	log_info("log_level       : %s", conf->get_str("logger.level"));
 	log_info("log_output      : %s", log_output.c_str());
 	log_info("log_rotate_size : %d", log_rotate_size);
 
+	if(app_args.is_daemon){
+		daemonize();
+	}
 
 	evbase = event_base_new();
 	if(!evbase){
@@ -449,38 +493,63 @@ void init(int argc, char **argv){
 	}
 }
 
-void write_pidfile(){
-	const char *pidfile = conf->get_str("pidfile");
-	if(strlen(pidfile)){
-		FILE *fp = fopen(pidfile, "w");
-		if(!fp){
-			log_error("Failed to open pidfile '%s': %s", pidfile, strerror(errno));
-			exit(0);
+void check_pidfile(){
+	if(app_args.pidfile.size()){
+		if(access(app_args.pidfile.c_str(), F_OK) == 0){
+			fprintf(stderr, "Fatal error!\nPidfile %s already exists!\n"
+				"Kill the running process before you run this command,\n"
+				"or use '-s restart' option to restart the server.\n",
+				app_args.pidfile.c_str());
+			exit(1);
 		}
-		char buf[128];
-		pid_t pid = getpid();
-		snprintf(buf, sizeof(buf), "%d", pid);
-		log_info("pidfile: %s, pid: %d", pidfile, pid);
-		fwrite(buf, 1, strlen(buf), fp);
-		fclose(fp);
 	}
 }
 
-void check_pidfile(){
-	const char *pidfile = conf->get_str("pidfile");
-	if(strlen(pidfile)){
-		if(access(pidfile, F_OK) == 0){
-			fprintf(stderr, "Fatal error!\nPidfile %s already exists!\n"
-				"You must kill the process and then "
-				"remove this file before starting icomet.\n", pidfile);
-			exit(0);
-		}
+int read_pid(){
+	if(app_args.pidfile.empty()){
+		return -1;
+	}
+	std::string s;
+	file_get_contents(app_args.pidfile, &s);
+	if(s.empty()){
+		return -1;
+	}
+	return str_to_int(s);
+}
+
+void write_pid(){
+	if(app_args.pidfile.empty()){
+		return;
+	}
+	int pid = (int)getpid();
+	std::string s = str(pid);
+	log_info("pidfile: %s, pid: %d", app_args.pidfile.c_str(), pid);
+	int ret = file_put_contents(app_args.pidfile, s);
+	if(ret == -1){
+		log_error("Failed to write pidfile '%s'(%s)", app_args.pidfile.c_str(), strerror(errno));
+		exit(1);
 	}
 }
 
 void remove_pidfile(){
-	const char *pidfile = conf->get_str("pidfile");
-	if(strlen(pidfile)){
-		remove(pidfile);
+	if(app_args.pidfile.size()){
+		remove(app_args.pidfile.c_str());
+	}
+}
+
+void kill_process(){
+	int pid = read_pid();
+	if(pid == -1){
+		fprintf(stderr, "could not read pidfile: %s(%s)\n", app_args.pidfile.c_str(), strerror(errno));
+		exit(1);
+	}
+	int ret = kill(pid, SIGTERM);
+	if(ret == -1){
+		fprintf(stderr, "could not kill process: %d(%s)\n", pid, strerror(errno));
+		exit(1);
+	}
+	
+	while(file_exists(app_args.pidfile)){
+		usleep(100 * 1000);
 	}
 }

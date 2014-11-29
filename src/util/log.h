@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2014 The icomet Authors. All rights reserved.
+Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 */
@@ -98,7 +98,7 @@ int log_write(int level, const char *fmt, ...);
 #define log_debug(fmt, args...)	\
 	log_write(Logger::LEVEL_DEBUG, "%s(%d): " fmt, __FILE__, __LINE__, ##args)
 #define log_info(fmt, args...)	\
-	log_write(Logger::LEVEL_INFO,  fmt, ##args)
+	log_write(Logger::LEVEL_INFO,  "%s(%d): " fmt, __FILE__, __LINE__, ##args)
 #define log_warn(fmt, args...)	\
 	log_write(Logger::LEVEL_WARN,  "%s(%d): " fmt, __FILE__, __LINE__, ##args)
 #define log_error(fmt, args...)	\
