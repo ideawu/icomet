@@ -51,21 +51,24 @@ esac
 
 ######### build jemalloc #########
 
-if [[ $TARGET_OS == CYGWIN* ]]; then
-	echo "not using jemalloc on $TARGET_OS"
-else
-	echo ""
-	DIR=`pwd`
-	cd "$JEMALLOC_PATH"
-	if [ ! -f Makefile ]; then
-		echo "building jemalloc..."
-		./configure
-		make
-		echo "building jemalloc finished"
-	fi
-	cd "$DIR"
-	echo ""
-fi
+case "$TARGET_OS" in
+	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
+		echo "not using jemalloc on $TARGET_OS"
+	;;
+	*)
+		DIR=`pwd`
+		cd $JEMALLOC_PATH
+		if [ ! -f Makefile ]; then
+			echo ""
+			echo "##### building jemalloc... #####"
+			./configure
+			make
+			echo "##### building jemalloc finished #####"
+			echo ""
+		fi
+		cd "$DIR"
+	;;
+esac
 
 
 ######### build libevent #########
