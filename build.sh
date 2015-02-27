@@ -88,12 +88,17 @@ rm -f build.h
 echo "#ifndef ICOMET_CONFIG_H" >> build.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> build.h
 echo "#endif" >> build.h
-if [[ $TARGET_OS == CYGWIN* ]]; then
-	:
-else
-	echo "#include <stdlib.h>" >> build.h
-	echo "#include <jemalloc/jemalloc.h>" >> build.h
-fi
+case "$TARGET_OS" in
+	CYGWIN*|FreeBSD)
+	;;
+        OS_ANDROID_CROSSCOMPILE)
+                echo "#define OS_ANDROID 1" >> src/version.h
+        ;;
+	*)
+		echo "#include <stdlib.h>" >> src/version.h
+		echo "#include <jemalloc/jemalloc.h>" >> src/version.h
+	;;
+esac
 
 
 ######### generate build.mk #########
@@ -112,12 +117,14 @@ echo CFLAGS += -I \"$LIBEVENT_PATH/compact\" >> build.mk
 echo CLIBS := >> build.mk
 echo CLIBS += $PLATFORM_LIBS >> build.mk
 
-if [[ $TARGET_OS == CYGWIN* ]]; then
-	:
-else
-	echo CFLAGS += -I \"$JEMALLOC_PATH/include\" >> build.mk
-	echo CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\" >> build.mk
-fi
+case "$TARGET_OS" in
+	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
+	;;
+	*)
+		echo "CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\"" >> build.mk
+		echo "CFLAGS += -I \"$JEMALLOC_PATH/include\"" >> build.mk
+	;;
+esac
 
 echo LIBEVENT_PATH = $LIBEVENT_PATH >> build.mk
 echo JEMALLOC_PATH = $JEMALLOC_PATH >> build.mk
