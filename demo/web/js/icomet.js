@@ -43,7 +43,7 @@ function iComet(config){
 	self.need_fast_reconnect = true;
 	self.token = '';
 
-	self.data_seq = 0;
+	self.data_seq = 1;
 	self.noop_seq = 0;
 	self.sign_cb = null;
 	
