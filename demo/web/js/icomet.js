@@ -191,7 +191,6 @@ function iComet(config){
 	}
 
 	var self_sub = function(){
-		self.log('sub');
 		self.stopped = false;
 		self.last_sub_time = (new Date()).getTime();
 		$('script.' + self.cb).remove();
@@ -201,6 +200,7 @@ function iComet(config){
 			 + '&noop=' + self.noop_seq
 			 + '&token=' + self.token
 			 + '&_=' + new Date().getTime();
+ 		self.log('sub ' + url);
 		$.ajax({
 			url: url,
 			dataType: "jsonp",
@@ -232,13 +232,13 @@ function iComet(config){
 						var a = parseInt(msg.sub_timeout) || 0;
 						self.sub_timeout = (a * 1.2) * 1000;
 					}catch(e){}
-					self.log('start sub ' + self.cname + ', timeout=' + self.sub_timeout + 'ms');
+					self.log('start sub ' + self.cname + ', seq=' + self.data_seq + ', timeout=' + self.sub_timeout + 'ms');
 					self._start_timeout_checker();
 					self_sub();
 				}
 			});
 		}else{
-			self.log('start sub ' + self.cname + ', timeout=' + self.sub_timeout + 'ms');
+			self.log('start sub ' + self.cname + ', seq=' + self.data_seq + ', timeout=' + self.sub_timeout + 'ms');
 			self._start_timeout_checker();
 			self_sub();
 		}
