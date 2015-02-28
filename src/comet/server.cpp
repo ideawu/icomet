@@ -243,12 +243,12 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	
 	channel->add_subscriber(sub);
 	subscribers ++;
-	sub->start();
 
 	log_debug("%s:%d sub %s, seq: %d, subs: %d",
 		req->remote_host, req->remote_port,
 		channel->name.c_str(), seq, channel->subs.size);
 
+	sub->start();
 	return 0;
 }
 
