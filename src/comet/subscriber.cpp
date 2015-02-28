@@ -44,12 +44,16 @@ void Subscriber::start(){
 		evhttp_send_reply_chunk(this->req, buf);
 	}
 	
-	// send buffered messages
 	if(this->seq_next == 0){
 		this->seq_next = channel->seq_next;
-	}
-	if(!channel->msg_list.empty() && channel->seq_next != this->seq_next){
-		this->send_old_msgs();
+		if(channel->seq_next != 0){
+			this->sync_next_seq();
+		}
+	}else{
+		// send buffered messages
+		if(!channel->msg_list.empty() && channel->seq_next != this->seq_next){
+			this->send_old_msgs();
+		}
 	}
 }
 
@@ -106,7 +110,16 @@ void Subscriber::noop(){
 	this->send_chunk(this->seq_noop, "noop", "");
 }
 
+void Subscriber::sync_next_seq(){
+	log_debug("%s:%d sync_next_seq: %d", req->remote_host, req->remote_port, seq_next);
+	this->send_chunk(seq_next, "next_seq", NULL);
+}
+
 void Subscriber::send_chunk(int seq, const char *type, const char *content){
+	if(content == NULL){
+		content = "";
+	}
+
 	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 	
 	if(this->type == POLL){
@@ -116,7 +129,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	}else if(this->type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
 	}
-	
+
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type, this->channel->name.c_str(), seq, content);

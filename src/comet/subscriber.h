@@ -44,6 +44,7 @@ public:
 	
 	void noop();
 	void send_old_msgs();
+	void sync_next_seq();
 	
 	static void send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content);
 };

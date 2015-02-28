@@ -43,7 +43,7 @@ function iComet(config){
 	self.need_fast_reconnect = true;
 	self.token = '';
 
-	self.data_seq = 1;
+	self.data_seq = 0;
 	self.noop_seq = 0;
 	self.sign_cb = null;
 	
@@ -127,6 +127,11 @@ function iComet(config){
 				self.log('ignore exceeded connections');
 			}
 			return;
+		}
+		if(msg.type == 'next_seq'){
+			self.log('proc', msg);
+			self.data_seq = msg.seq;
+			self_sub();
 		}
 		if(msg.type == 'data'){
 			self.last_sub_time = (new Date()).getTime();
