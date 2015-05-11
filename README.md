@@ -12,6 +12,10 @@ iComet provides a easy-to-use JavaScript library, with iComet js lib, you can bu
 
 ![icomet's role](http://www.ideawu.com/icomet/icomet-role.png?t=1)
 
+### The work process of iComet in your system
+
+![The work process of iComet in your system](http://www.ideawu.com/icomet/icomet-workflow.png)
+
 
 ## Compile and Run
 
