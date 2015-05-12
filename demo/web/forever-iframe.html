@@ -39,6 +39,10 @@ try{
 
 var count = 0;
 function icomet_cb(msg){
+	if(msg.type == 'next_seq'){
+		next_seq = parseInt(msg.seq);
+		continue;
+	}
 	if(msg.type != 'data'){
 		return;
 	}
@@ -52,7 +56,7 @@ function icomet_cb(msg){
 	<h3>Server push messages:</h3>
 	<div id="output"></div>
 
-	<iframe src="http://127.0.0.1:8080/icomet/iframe?cname=a" height="0" width="0" border="0" style="border:none;"></iframe>
+	<iframe src="http://127.0.0.1:8100/iframe?cname=a" height="0" width="0" border="0" style="border:none;"></iframe>
 
 </body>
 </html>

@@ -46,7 +46,7 @@ function sub(seq){
 		next_seq = seq | 0;
 		var body = document.getElementsByTagName('body')[0];
 		var script = document.createElement('script');
-		script.src = 'http://127.0.0.1:8080/icomet/poll?cname=a&cb=icomet_cb&seq=' + next_seq;
+		script.src = 'http://127.0.0.1:8100/sub?cname=a&cb=icomet_cb&seq=' + next_seq;
 		if(last_script){
 			body.removeChild(last_script);
 		}
@@ -63,6 +63,10 @@ function icomet_cb(msg_data){
 	}
 	for(var k in msg_data){
 		var msg = msg_data[k];
+		if(msg.type == 'next_seq'){
+			next_seq = parseInt(msg.seq);
+			continue;
+		}
 		if(msg.type != 'data'){
 			continue;
 		}
