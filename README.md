@@ -28,7 +28,7 @@ make
 # stop
 ./comet-server icomet.conf -s stop
 
-curl -v "http://127.0.0.1:8100/sub?cname=12"
+curl -v "http://127.0.0.1:8100/sub?cname=12&seq=1"
 # open another terminal
 curl -v "http://127.0.0.1:8000/push?cname=12&content=hi"
 ```
