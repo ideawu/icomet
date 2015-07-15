@@ -25,6 +25,8 @@ unzip master.zip
 cd icomet-master/
 make
 ./comet-server icomet.conf
+# or run as daemon
+./comet-server -d icomet.conf
 # stop
 ./comet-server icomet.conf -s stop
 
