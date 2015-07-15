@@ -19,21 +19,28 @@ iComet provides a easy-to-use JavaScript library, with iComet js lib, you can bu
 
 ## Compile and Run
 
+Compile:
+
 ```shell
 wget --no-check-certificate https://github.com/ideawu/icomet/archive/master.zip
 unzip master.zip
 cd icomet-master/
 make
-./comet-server icomet.conf
-# or run as daemon
-./comet-server -d icomet.conf
-# stop
-./comet-server icomet.conf -s stop
-
-curl -v "http://127.0.0.1:8100/sub?cname=12&seq=1"
-# open another terminal
-curl -v "http://127.0.0.1:8000/push?cname=12&content=hi"
 ```
+
+Start icomet server
+
+	./icomet-server icomet.conf
+	# or run as daemon
+	./icomet-server -d icomet.conf
+	# stop
+	./icomet-server icomet.conf -s stop
+
+Make a test via curl:
+
+	curl -v "http://127.0.0.1:8100/sub?cname=12&seq=1"
+	# open another terminal
+	curl -v "http://127.0.0.1:8000/push?cname=12&content=hi"
 
 ## JavaScript Library Usage
 
