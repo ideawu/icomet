@@ -29,7 +29,7 @@ or http://127.0.0.1:8080/web/forever-iframe.html
 
 4. open a command line terminal, execute
 
-curl "http://127.0.0.1:8000/pub?cname=a&content=hello"
+curl "http://127.0.0.1:8000/push?cname=a&content=hello"
 </pre>
 
 	<h3>Server push messages:</h3>
@@ -67,14 +67,16 @@ function icomet_cb(msg_data){
 			next_seq = parseInt(msg.seq);
 			continue;
 		}
-		if(msg.type != 'data'){
+		if(msg.type != 'data' && msg.type != 'broadcast'){
 			continue;
 		}
-		next_seq = parseInt(msg.seq) + 1;
+		if(msg.type == 'data'){
+			next_seq = parseInt(msg.seq) + 1;
+		}
 		count ++;
 		var output = document.getElementById('output');
 		var time = '' + (new Date());
-		output.innerHTML += count + '. ' + time + ': ' + msg.content + '<br/>';
+		output.innerHTML += count + '. ' + time + ': (' + msg.type + ') ' + msg.content + '<br/>';
 	}
 	// start next polling
 	sub(next_seq);

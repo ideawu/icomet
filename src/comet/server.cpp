@@ -331,6 +331,8 @@ int Server::broadcast(struct evhttp_request *req){
 	
 	HttpQuery query(req);
 	const char *content = query.get_str("content", "");
+	log_debug("%s:%d broadcast, content: %s",
+		req->remote_host, req->remote_port, content);
 	
 	LinkedList<Channel *>::Iterator it = used_channels.iterator();
 	while(Channel *channel = it.next()){

@@ -133,6 +133,12 @@ function iComet(config){
 			self.data_seq = msg.seq;
 			self_sub();
 		}
+		if(msg.type == 'broadcast'){
+			self.last_sub_time = (new Date()).getTime();
+			self.log('proc', msg);
+			self.sub_cb(msg);
+			self_sub();
+		}
 		if(msg.type == 'data'){
 			self.last_sub_time = (new Date()).getTime();
 			if(msg.seq != self.data_seq){

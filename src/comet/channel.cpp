@@ -86,14 +86,13 @@ static std::string json_encode(const char *str){
 }
 
 void Channel::send(const char *type, const char *content, bool encoded){
+	std::string new_content;
+	if(encoded){
+		new_content = content;
+	}else{
+		new_content = json_encode(content);
+	}
 	if(strcmp(type, "data") == 0){
-		std::string new_content;
-		if(encoded){
-			new_content = content;
-		}else{
-			new_content = json_encode(content);
-		}
-	
 		LinkedList<Subscriber *>::Iterator it = subs.iterator();
 		while(Subscriber *sub = it.next()){
 			sub->send_chunk(this->seq_next, type, new_content.c_str());
@@ -110,7 +109,7 @@ void Channel::send(const char *type, const char *content, bool encoded){
 	}else{
 		LinkedList<Subscriber *>::Iterator it = subs.iterator();
 		while(Subscriber *sub = it.next()){
-			sub->send_chunk(this->seq_next, type, content);
+			sub->send_chunk(this->seq_next, type, new_content.c_str());
 		}
 	}
 }

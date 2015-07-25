@@ -12,7 +12,6 @@ function icomet_push($cname, $content){
 	$cname = urlencode($cname);
 	$content = urlencode($content);
 	$url = "http://127.0.0.1:8000/push?cname=$cname&content=$content";
-	$resp = http_get($url);
 
 	$ch = curl_init($url) ;
 	curl_setopt($ch, CURLOPT_HEADER, 0);
