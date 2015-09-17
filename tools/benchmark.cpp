@@ -1,4 +1,3 @@
-#include "../config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -8,6 +7,7 @@
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/bufferevent.h>
+#include "util/config.h"
 #include "util/log.h"
 
 #define MAX_BIND_PORTS 1
