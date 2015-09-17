@@ -2,8 +2,7 @@ include ../build.mk
 
 
 all:
-	$(CC) -o ./benchmark \
-		-lstdc++  \
+	$(CXX) -o ./benchmark \
 		$(CFLAGS) \
 		-I../src \
 		../src/util/*.o benchmark.cpp \
