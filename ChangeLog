@@ -4,6 +4,8 @@
 		- Send periodical presence online events(2014-11-29)
 	* Incompatible changes:
 		- /broadcast will automatically encode content(2015-07-25)
+	* Bug fixes:
+		- Fix Logger bug on multi-threads(2016-01-25)
 * 0.2.2.2
 	* New features:
 		- Add /broadcast, broadcast message to all channels(2014-08-28)
