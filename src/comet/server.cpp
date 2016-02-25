@@ -15,20 +15,49 @@ found in the LICENSE file.
 
 class HttpQuery{
 private:
-	struct evkeyvalq params;
+	struct evkeyvalq _get;
+	struct evkeyvalq _post;
+	bool _has_post;
 public:
 	HttpQuery(struct evhttp_request *req){
-		evhttp_parse_query(evhttp_request_get_uri(req), &params);
+		_has_post = false;
+		if(evhttp_request_get_command(req) == EVHTTP_REQ_POST){
+			evbuffer *body_evb = evhttp_request_get_input_buffer(req);
+			size_t len = evbuffer_get_length(body_evb);
+			if(len > 0){
+				_has_post = true;
+				char *data = (char *)malloc(len);
+			    evbuffer_copyout(body_evb, data, len);
+				evhttp_parse_query_str(data, &_post);
+				free(data);
+			}
+		}
+		evhttp_parse_query(evhttp_request_get_uri(req), &_get);
 	}
 	~HttpQuery(){
-		evhttp_clear_headers(&params);
+		evhttp_clear_headers(&_get);
+		if(_has_post){
+			evhttp_clear_headers(&_post);
+		}
 	}
 	int get_int(const char *name, int def){
-		const char *val = evhttp_find_header(&params, name);
+		if(_has_post){
+			const char *val = evhttp_find_header(&_post, name);
+			if(val){
+				return atoi(val);
+			}
+		}
+		const char *val = evhttp_find_header(&_get, name);
 		return val? atoi(val) : def;
 	}
 	const char* get_str(const char *name, const char *def){
-		const char *val = evhttp_find_header(&params, name);
+		if(_has_post){
+			const char *val = evhttp_find_header(&_post, name);
+			if(val){
+				return val;
+			}
+		}
+		const char *val = evhttp_find_header(&_get, name);
 		return val? val : def;
 	}
 };
@@ -266,7 +295,8 @@ int Server::ping(struct evhttp_request *req){
 }
 
 int Server::pub(struct evhttp_request *req, bool encoded){
-	if(evhttp_request_get_command(req) != EVHTTP_REQ_GET){
+	evhttp_cmd_type http_method = evhttp_request_get_command(req);
+	if(http_method != EVHTTP_REQ_GET && http_method != EVHTTP_REQ_POST){
 		evhttp_send_reply(req, 405, "Invalid Method", NULL);
 		return 0;
 	}

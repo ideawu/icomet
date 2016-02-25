@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2014 The icomet Authors. All rights reserved.
+Copyright (c) 2012-2016 The icomet Authors. All rights reserved.
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 */
@@ -340,7 +340,7 @@ int main(int argc, char **argv){
 
 void welcome(){
 	printf("icomet-server %s\n", ICOMET_VERSION);
-	printf("Copyright (c) 2013-2014 ideawu.com\n");
+	printf("Copyright (c) 2013-2016 ideawu.com\n");
 	printf("\n");
 }
 
