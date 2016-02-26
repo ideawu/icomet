@@ -326,9 +326,16 @@ int Server::pub(struct evhttp_request *req, bool encoded){
 		return 0;
 		*/
 	}
-	log_debug("%s:%d pub %s, seq: %d, subs: %d, content: %s",
-		req->remote_host, req->remote_port,
-		channel->name.c_str(), channel->seq_next, channel->subs.size, content);
+	int clen = strlen(content);
+	if(clen > 128){
+		log_debug("%s:%d pub %s, seq: %d, subs: %d, content: [%d bytes]",
+			req->remote_host, req->remote_port,
+			channel->name.c_str(), channel->seq_next, channel->subs.size, clen);
+	}else{
+		log_debug("%s:%d pub %s, seq: %d, subs: %d, content: %s",
+			req->remote_host, req->remote_port,
+			channel->name.c_str(), channel->seq_next, channel->subs.size, content);
+	}
 		
 	// response to publisher
 	evhttp_add_header(req->output_headers, "Content-Type", "text/javascript; charset=utf-8");
