@@ -121,7 +121,7 @@ void ping_handler(struct evhttp_request *req, void *arg){
 
 void pub_handler(struct evhttp_request *req, void *arg){
 	CHECK_AUTH();
-	serv->pub(req, true);
+	serv->pub(req, false);
 }
 
 void push_handler(struct evhttp_request *req, void *arg){
