@@ -26,8 +26,9 @@ public:
 			size_t len = evbuffer_get_length(body_evb);
 			if(len > 0){
 				_has_post = true;
-				char *data = (char *)malloc(len);
-			    evbuffer_copyout(body_evb, data, len);
+				char *data = (char *)malloc(len + 1);
+				evbuffer_copyout(body_evb, data, len);
+				data[len] = '\0';
 				evhttp_parse_query_str(data, &_post);
 				free(data);
 			}
