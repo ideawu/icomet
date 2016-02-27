@@ -19,10 +19,35 @@
 
 // this function is called in a separated thread, it gets called when receive msg from icomet server
 size_t icomet_callback(char *ptr, size_t size, size_t nmemb, void *userdata){
+	static NSMutableData *buf = nil;
+	if(buf == nil){
+		buf = [[NSMutableData alloc] init];
+	}
 	const size_t sizeInBytes = size*nmemb;
-	NSData *data = [[NSData alloc] initWithBytes:ptr length:sizeInBytes];
-	NSString* s = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-	NSLog(@"%@", s);
+	[buf appendBytes:ptr length:sizeInBytes];
+	
+	const char *start = (const char *)buf.bytes;
+	const char *end = start + buf.length;
+	const char *sp, *ep;
+	sp = ep = start;
+	while(ep < end){
+		char c = *ep;
+		ep ++;
+		if(c == '\n'){
+			NSUInteger len = ep - sp;
+			NSData *data = [[NSData alloc] initWithBytesNoCopy:(void *)sp length:len freeWhenDone:NO];
+			sp = ep;
+			
+			NSString* json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+			NSLog(@"recv %d bytes", (int)json.length);
+			// process json string here ...
+		}
+	}
+	if(sp != start){
+		NSRange range = NSMakeRange(0, sp - start);
+		[buf replaceBytesInRange:range withBytes:NULL length:0];
+	}
+
 	// beware of multi-thread issue
 
 	ViewController *controller = (__bridge ViewController *)userdata;
