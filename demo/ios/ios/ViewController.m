@@ -60,6 +60,11 @@ size_t icomet_callback(char *ptr, size_t size, size_t nmemb, void *userdata){
 
 @implementation ViewController
 
+- (id)init{
+	self = [super init];
+	return self;
+}
+
 - (void)viewDidLoad {
 	[super viewDidLoad];
 	self.navigationController.navigationBar.translucent = NO;
@@ -75,10 +80,24 @@ size_t icomet_callback(char *ptr, size_t size, size_t nmemb, void *userdata){
 	[self.view addSubview:_mainView];
 
 	///////////////////////////
+	[self start];
+}
+
+- (void)start{
 	[self performSelectorInBackground:@selector(startStreaming) withObject:nil];
 }
 
+- (void)shutdown{
+	if(_curl){
+		curl_easy_cleanup(_curl);
+		_curl = nil;
+	}
+}
+
 - (void)startStreaming{
+	if(_curl){
+		return;
+	}
 	_curl = curl_easy_init();
 	curl_easy_setopt(_curl, CURLOPT_URL, "http://127.0.0.1:8100/stream?cname=a&seq=1");
 	curl_easy_setopt(_curl, CURLOPT_NOSIGNAL, 1L);	// try not to use signals
@@ -86,7 +105,9 @@ size_t icomet_callback(char *ptr, size_t size, size_t nmemb, void *userdata){
 	curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, icomet_callback);
 	curl_easy_setopt(_curl, CURLOPT_WRITEDATA, self);
 	curl_easy_perform(_curl);
-	curl_easy_cleanup(_curl);
+	if(_curl){ // may have been shut down
+		curl_easy_cleanup(_curl);
+	}
 }
 
 @end

@@ -10,6 +10,8 @@
 
 @interface ViewController : UIViewController
 
+- (void)start;
+- (void)shutdown;
 
 @end
 
