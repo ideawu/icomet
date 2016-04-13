@@ -199,6 +199,7 @@ int Server::psub_end(PresenceSubscriber *psub){
 	evhttp_send_reply_end(req);
 	psubs.remove(psub);
 	log_info("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
+	delete psub;
 	return 0;
 }
 
