@@ -7,6 +7,7 @@ found in the LICENSE file.
 #define ICOMET_CHANNEL_H
 
 #include "../build.h"
+#include <string.h>
 #include <string>
 #include <vector>
 #include <evhttp.h>
