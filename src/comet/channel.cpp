@@ -86,30 +86,29 @@ static std::string json_encode(const char *str){
 }
 
 void Channel::send(const char *type, const char *content, bool encoded){
-	std::string new_content;
+	Message msg;
+	msg.seq = seq_next;
+	msg.set_type_text(type);
 	if(encoded){
-		new_content = content;
+		msg.content = content;
 	}else{
-		new_content = json_encode(content);
+		msg.content = json_encode(content);
 	}
-	if(strcmp(type, "data") == 0){
-		LinkedList<Subscriber *>::Iterator it = subs.iterator();
-		while(Subscriber *sub = it.next()){
-			sub->send_chunk(this->seq_next, type, new_content.c_str());
-		}
 
-		msg_list.push_back(new_content);
+	LinkedList<Subscriber *>::Iterator it = subs.iterator();
+	while(Subscriber *sub = it.next()){
+		sub->send_chunk(msg.seq, type, msg.content.c_str());
+	}
+
+	if(msg.type == Message::DATA || msg.type == Message::BROADCAST){
+		msg_list.push_back(msg);
 		seq_next ++;
-		if(msg_list.size() >= ServerConfig::channel_buffer_size * 1.5){
-			std::vector<std::string>::iterator it;
-			it = msg_list.end() - ServerConfig::channel_buffer_size;
-			msg_list.assign(it, msg_list.end());
-			log_trace("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
-		}
-	}else{
-		LinkedList<Subscriber *>::Iterator it = subs.iterator();
-		while(Subscriber *sub = it.next()){
-			sub->send_chunk(this->seq_next, type, new_content.c_str());
-		}
+	}
+	
+	if(msg_list.size() >= ServerConfig::channel_buffer_size * 1.5){
+		std::vector<Message>::iterator it;
+		it = msg_list.end() - ServerConfig::channel_buffer_size;
+		msg_list.assign(it, msg_list.end());
+		log_trace("resize msg_list to %d, seq_next: %d", msg_list.size(), seq_next);
 	}
 }

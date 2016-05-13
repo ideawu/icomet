@@ -44,9 +44,9 @@ void Subscriber::start(){
 		evhttp_send_reply_chunk(this->req, buf);
 	}
 	
-	if(this->seq_next == 0){
+	if(this->seq_next == 0 || Channel::SEQ_GT(this->seq_next, channel->seq_next)){
 		this->seq_next = channel->seq_next;
-		if(channel->seq_next != 0){
+		if(this->seq_next != 0){
 			this->sync_next_seq();
 		}
 	}else{
@@ -58,42 +58,30 @@ void Subscriber::start(){
 }
 
 void Subscriber::send_old_msgs(){
-	std::vector<std::string>::iterator it = channel->msg_list.end();
-	int msg_seq_min = channel->seq_next - channel->msg_list.size();
-	if(Channel::SEQ_GT(this->seq_next, channel->seq_next) || Channel::SEQ_LT(this->seq_next, msg_seq_min)){
-		this->seq_next = msg_seq_min;
+	std::vector<Message>::iterator it = channel->msg_list.begin();
+	while(1){
+		if(it == channel->msg_list.end()){
+			return;
+		}
+		const Message &msg = *it;
+		if(msg.seq >= this->seq_next){
+			log_debug("send old msg [%d ~ %d]", msg.seq, this->channel->seq_next-1);
+			break;
+		}
+		it ++;
 	}
-	log_debug("send old msg: [%d, %d]", this->seq_next, channel->seq_next - 1);
-	it -= (channel->seq_next - this->seq_next);
 
-	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 	if(this->type == POLL){
-		if(!this->callback.empty()){
-			evbuffer_add_printf(buf, "%s(", this->callback.c_str());
+		this->poll_send_start();
+		for(/**/; it != channel->msg_list.end(); it++){
+			const Message &msg = *it;
+			this->poll_send(msg.seq, msg.get_type_text(), msg.content.c_str());
 		}
-		evbuffer_add_printf(buf, "[");
-		for(/**/; it != channel->msg_list.end(); it++, this->seq_next++){
-			std::string &msg = *it;
-			evbuffer_add_printf(buf,
-				"{\"type\":\"data\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
-				this->channel->name.c_str(),
-				this->seq_next,
-				msg.c_str());
-			if(this->seq_next != channel->seq_next - 1){
-				evbuffer_add(buf, ",", 1);
-			}
-		}
-		evbuffer_add_printf(buf, "]");
-		if(!this->callback.empty()){
-			evbuffer_add_printf(buf, ");");
-		}
-		evbuffer_add_printf(buf, "\n");
-		evhttp_send_reply_chunk(this->req, buf);
-		this->close();
-	}else if(this->type == IFRAME || this->type == STREAM){
-		for(/**/; it != channel->msg_list.end(); it++, this->seq_next++){
-			std::string &msg = *it;
-			this->send_chunk(this->seq_next, "data", msg.c_str());
+		this->poll_send_end();
+	}else{
+		for(/**/; it != channel->msg_list.end(); it++){
+			const Message &msg = *it;
+			this->send_chunk(msg.seq, msg.get_type_text(), msg.content.c_str());
 		}
 	}
 }
@@ -115,39 +103,79 @@ void Subscriber::sync_next_seq(){
 	this->send_chunk(seq_next, "next_seq", NULL);
 }
 
-void Subscriber::send_chunk(int seq, const char *type, const char *content){
+void Subscriber::poll_send_start(){
+	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
+	if(!this->callback.empty()){
+		evbuffer_add_printf(buf, "%s(", this->callback.c_str());
+	}
+	evbuffer_add_printf(buf, "[");
+}
+
+void Subscriber::poll_send_end(){
+	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
+	evbuffer_add_printf(buf, "null]");
+	if(!this->callback.empty()){
+		evbuffer_add_printf(buf, ");");
+	}
+	evbuffer_add_printf(buf, "\n");
+	evhttp_send_reply_chunk(this->req, buf);
+	this->close();
+}
+
+void Subscriber::poll_send(int seq, const char *type, const char *content){
+	this->idle = 0;
+	if(strcmp(type, "data") == 0 || strcmp(type, "broadcast") == 0){
+		this->seq_next = seq + 1;
+	}
 	if(content == NULL){
 		content = "";
 	}
 
 	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
+	evbuffer_add_printf(buf,
+		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
+		type,
+		this->channel->name.c_str(),
+		seq,
+		content);
+	evbuffer_add(buf, ",", 1);
 	
+	if(strcmp(type, "broadcast") == 0){
+		this->poll_send(this->seq_next, "next_seq", "");
+	}
+}
+
+void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	if(this->type == POLL){
-		if(!this->callback.empty()){
-			evbuffer_add_printf(buf, "%s(", this->callback.c_str());
-		}
-	}else if(this->type == IFRAME){
-		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
+		this->poll_send_start();
+		this->poll_send(seq, type, content);
+		this->poll_send_end();
+		return;
 	}
 
+	this->idle = 0;
+	if(strcmp(type, "data") == 0 || strcmp(type, "broadcast") == 0){
+		this->seq_next = seq + 1;
+	}
+	if(content == NULL){
+		content = "";
+	}
+
+	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
+	if(this->type == IFRAME){
+		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
+	}
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type, this->channel->name.c_str(), seq, content);
-
-	if(this->type == POLL){
-		if(!this->callback.empty()){
-			evbuffer_add_printf(buf, ");");
-		}
-	}else if(this->type == IFRAME){
+	if(this->type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_suffix.c_str());
 	}
-
 	evbuffer_add_printf(buf, "\n");
 	evhttp_send_reply_chunk(this->req, buf);
 
-	this->idle = 0;
-	if(this->type == POLL){
-		this->close();
+	if(strcmp(type, "broadcast") == 0){
+		this->sync_next_seq();
 	}
 }
 

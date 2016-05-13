@@ -1,5 +1,6 @@
 * 0.2.3
 	* New features:
+		- Reliable deliver of broadcast during reconnect(2016-05-13)
 		- /pub supports POST(2016-02-25)
 		- Add icomet-server start options(2014-11-29)
 		- Send periodical presence online events(2014-11-29)

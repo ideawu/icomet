@@ -17,6 +17,37 @@ found in the LICENSE file.
 class Server;
 class Subscriber;
 
+class Message{
+public:
+	const static int NOOP      = 0;
+	const static int DATA      = 1;
+	const static int BROADCAST = 2;
+	
+	int seq;
+	int type;
+	std::string content;
+	
+	void set_type_text(const char *type){
+		if(strcmp(type, "data") == 0){
+			this->type = DATA;
+		}else if(strcmp(type, "broadcast") == 0){
+			this->type = BROADCAST;
+		}else{
+			this->type = NOOP;
+		}
+	}
+	
+	const char* get_type_text() const{
+		if(this->type == DATA){
+			return "data";
+		}else if(this->type == BROADCAST){
+			return "broadcast";
+		}else{
+			return "noop";
+		}
+	}
+};
+
 
 class Channel{
 private:
@@ -50,14 +81,7 @@ public:
 	
 	int presence_idle;
 	
-	// TODO:
-	/*
-	struct Message{
-		int time;
-		std::string content;
-	};
-	*/
-	std::vector<std::string> msg_list;
+	std::vector<Message> msg_list;
 	
 	Channel();
 	~Channel();
