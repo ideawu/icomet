@@ -68,12 +68,13 @@ function iComet(config){
 		if(msg instanceof Array){
 			self.log('batch response', msg.length);
 			for(var i in msg){
-				if(msg[i] && msg[i].type == 'data'){
-					if(i == msg.length - 1){
-						window[self.cb](msg[i]);
-					}else{
-						window[self.cb](msg[i], true);
-					}
+				if(!msg){
+					continue;
+				}
+				if(i == msg.length - 1){
+					window[self.cb](msg[i]);
+				}else{
+					window[self.cb](msg[i], true);
 				}
 			}
 			return;

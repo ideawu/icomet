@@ -103,17 +103,21 @@ void Subscriber::sync_next_seq(){
 	this->send_chunk(seq_next, "next_seq", NULL);
 }
 
-void Subscriber::poll_send_start(){
+void Subscriber::poll_send_start(bool array){
 	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
 	if(!this->callback.empty()){
 		evbuffer_add_printf(buf, "%s(", this->callback.c_str());
 	}
-	evbuffer_add_printf(buf, "[");
+	if(array){
+		evbuffer_add_printf(buf, "[");
+	}
 }
 
-void Subscriber::poll_send_end(){
+void Subscriber::poll_send_end(bool array){
 	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
-	evbuffer_add_printf(buf, "null]");
+	if(array){
+		evbuffer_add_printf(buf, "]");
+	}
 	if(!this->callback.empty()){
 		evbuffer_add_printf(buf, ");");
 	}
@@ -122,7 +126,7 @@ void Subscriber::poll_send_end(){
 	this->close();
 }
 
-void Subscriber::poll_send(int seq, const char *type, const char *content){
+void Subscriber::poll_send(int seq, const char *type, const char *content, bool array){
 	this->idle = 0;
 	if(strcmp(type, "data") == 0 || strcmp(type, "broadcast") == 0){
 		this->seq_next = seq + 1;
@@ -138,7 +142,9 @@ void Subscriber::poll_send(int seq, const char *type, const char *content){
 		this->channel->name.c_str(),
 		seq,
 		content);
-	evbuffer_add(buf, ",", 1);
+	if(array){
+		evbuffer_add(buf, ",", 1);
+	}
 	
 	if(strcmp(type, "broadcast") == 0){
 		this->poll_send(this->seq_next, "next_seq", "");
@@ -147,9 +153,9 @@ void Subscriber::poll_send(int seq, const char *type, const char *content){
 
 void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	if(this->type == POLL){
-		this->poll_send_start();
-		this->poll_send(seq, type, content);
-		this->poll_send_end();
+		this->poll_send_start(false);
+		this->poll_send(seq, type, content, false);
+		this->poll_send_end(false);
 		return;
 	}
 

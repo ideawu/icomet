@@ -49,9 +49,9 @@ public:
 	static void send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content);
 	
 private:
-	void poll_send_start();
-	void poll_send_end();
-	void poll_send(int seq, const char *type, const char *content);
+	void poll_send_start(bool array=true);
+	void poll_send_end(bool array=true);
+	void poll_send(int seq, const char *type, const char *content, bool array=true);
 };
 
 #endif
