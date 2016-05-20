@@ -153,9 +153,10 @@ void Subscriber::poll_send(int seq, const char *type, const char *content, bool 
 
 void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	if(this->type == POLL){
-		this->poll_send_start(false);
-		this->poll_send(seq, type, content, false);
-		this->poll_send_end(false);
+		bool is_arr = strcmp(type, "broadcast") == 0;
+		this->poll_send_start(is_arr);
+		this->poll_send(seq, type, content, is_arr);
+		this->poll_send_end(is_arr);
 		return;
 	}
 
