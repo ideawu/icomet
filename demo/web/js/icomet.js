@@ -9,7 +9,7 @@ config = {
 	subUrl: 'http://...',
 	[pubUrl: 'http://...',]
 	// be called when receive a msg
-	callback: function(content){}
+	callback: function(content, type=undefined){}
 };
 */
 function iComet(config){
@@ -23,10 +23,11 @@ function iComet(config){
 	
 	self.cname = config.channel;
 	self.sub_cb = function(msg){
+		self.log('proc', msg);
 		var cb = config.callback || config.sub_callback;
 		if(cb){
 			try{
-				cb(msg.content);
+				cb(msg.content, msg.type);
 			}catch(e){
 				self.log(e);
 			}
@@ -40,7 +41,6 @@ function iComet(config){
 	self.sign_timer = null;
 	self.stopped = true;
 	self.last_sub_time = 0;
-	self.need_fast_reconnect = true;
 	self.token = '';
 
 	self.data_seq = 0;
@@ -122,7 +122,7 @@ function iComet(config){
 				}
 				// if the channel is empty, it is probably empty next time,
 				// so pause some seconds before sub again
-				setTimeout(self_sub, 1000 + Math.random() * 2000);
+				setTimeout(self_sub, Math.random() * 1000);
 			}else{
 				// we have created more than one connection, ignore it
 				self.log('ignore exceeded connections');
@@ -132,7 +132,10 @@ function iComet(config){
 		if(msg.type == 'next_seq'){
 			self.log('proc', msg);
 			self.data_seq = msg.seq;
-			self_sub();
+			if(!in_batch){
+				self_sub();
+			}
+			return;
 		}
 		if(msg.type == 'data' || msg.type == 'broadcast'){
 			self.last_sub_time = (new Date()).getTime();
@@ -150,31 +153,16 @@ function iComet(config){
 				}
 				
 				self.data_seq = msg.seq;
-				if(self.data_seq == 2147483647){
-					self.data_seq = -2147483648;
-				}else{
-					self.data_seq ++;
-				}
-				if(!in_batch){
-					// fast reconnect
-					var now = new Date().getTime();
-					if(self.need_fast_reconnect || now - self.last_sub_time > 3 * 1000){
-						self.log('fast reconnect');
-						self.need_fast_reconnect = false;
-						self_sub();
-					}
-				}
 			}else{
-				self.log('proc', msg);
-				if(self.data_seq == 2147483647){
-					self.data_seq = -2147483648;
-				}else{
-					self.data_seq ++;
-				}
 				self.sub_cb(msg);
-				if(!in_batch){
-					self_sub();
-				}
+			}
+			if(self.data_seq == 2147483647){
+				self.data_seq = -2147483648;
+			}else{
+				self.data_seq ++;
+			}
+			if(!in_batch){
+				self_sub();
 			}
 			return;
 		}
@@ -192,21 +180,23 @@ function iComet(config){
 	}
 
 	var self_sub = function(){
-		self.stopped = false;
-		self.last_sub_time = (new Date()).getTime();
-		$('script.' + self.cb).remove();
-		var url = self.sub_url
-			 + '&cname=' + self.cname
-			 + '&seq=' + self.data_seq
-			 + '&noop=' + self.noop_seq
-			 + '&token=' + self.token
-			 + '&_=' + new Date().getTime();
- 		self.log('sub ' + url);
-		$.ajax({
-			url: url,
-			dataType: "jsonp",
-			jsonpCallback: "cb"
-		});
+		setTimeout(function(){
+			self.stopped = false;
+			self.last_sub_time = (new Date()).getTime();
+			$('script.' + self.cb).remove();
+			var url = self.sub_url
+				 + '&cname=' + self.cname
+				 + '&seq=' + self.data_seq
+				 + '&noop=' + self.noop_seq
+				 + '&token=' + self.token
+				 + '&_=' + new Date().getTime();
+	 		self.log('sub ' + url);
+			$.ajax({
+				url: url,
+				dataType: "jsonp",
+				jsonpCallback: "cb"
+			});
+		}, 0);
 	}
 	
 	self.start = function(){
@@ -248,7 +238,6 @@ function iComet(config){
 	self.stop = function(){
 		self.stopped = true;
 		self.last_sub_time = 0;
-		self.need_fast_reconnect = true;
 		if(self.timer){
 			clearTimeout(self.timer);
 			self.timer = null;
