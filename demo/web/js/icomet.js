@@ -9,7 +9,7 @@ config = {
 	subUrl: 'http://...',
 	[pubUrl: 'http://...',]
 	// be called when receive a msg
-	callback: function(content, type=undefined){}
+	callback: function(content, type){}
 };
 */
 function iComet(config){

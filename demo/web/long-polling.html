@@ -20,21 +20,21 @@
 curl "http://127.0.0.1:8000/push?cname=a&content=hello"
 </pre>
 
-	<h3>Server push messages:</h3>
-	<div id="output"></div>
+<h3>Server push messages:</h3>
+<div id="output"></div>
 
 <script>
-	var count = 0;
-	var comet = new iComet({
-		channel : 'a',
-		subUrl : 'http://127.0.0.1:8100/sub',
-		callback : function (content, type) {
-			count ++;
-			var output = document.getElementById('output');
-			var time = '' + (new Date());
-			output.innerHTML += count + '. ' + time + ': (' + type + ') ' + content + '<br/>';
-		}
-	});
+var count = 0;
+var comet = new iComet({
+	channel : 'a',
+	subUrl : 'http://127.0.0.1:8100/sub',
+	callback : function (content, type) {
+		count ++;
+		var output = document.getElementById('output');
+		var time = '' + (new Date());
+		output.innerHTML += count + '. ' + time + ': (' + type + ') ' + content + '<br/>';
+	}
+});
 	
 	
 // var count = 0;
