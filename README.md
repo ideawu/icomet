@@ -132,3 +132,8 @@ http://www.test.com/icomet/sub?cname=xxx
 
  * xiaozhu.com
  * testin.cn
+
+## QQ group
+
+ * 389083972
+
