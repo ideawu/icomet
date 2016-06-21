@@ -71,18 +71,6 @@ var comet = new iComet({
 * [Android App Demo](https://github.com/ideawu/icomet-demos)
 
 
-## Memory Usage
-
-| Connections | VIRT | RES |
-| ----------- | ---- | --- |
-| 0 | 39m | 24m |
-| 100,000 | 302m | 288m |
-| 200,000 | 579m |565m |
-| 500,000 | 1441m | 1427m |
-| 1,000,000 | 2734m | 2720m |
-
-2.7KB per connection.
-
 ## Run the chat demo
 
 1. Compile and start icomet server
@@ -95,7 +83,7 @@ var comet = new iComet({
 
 This live demo is based on https://github.com/ideawu/icomet-demos, which has buddy list, chat history, and other features.
 
-http://www.ideawu.com/icomet/chat.html
+Live Demo: http://www.ideawu.com/icomet/chat.html
 
 ## Nginx + icomet
 
