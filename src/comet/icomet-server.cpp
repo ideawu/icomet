@@ -214,7 +214,7 @@ int main(int argc, char **argv){
 		// 销毁通道
 		// /close?cname=abc
 		evhttp_set_cb(admin_http, "/close", close_handler, NULL);
-		// 销毁通道
+		// 清除通道的消息
 		// /clear?cname=abc
 		evhttp_set_cb(admin_http, "/clear", clear_handler, NULL);
 		// 获取通道的信息
