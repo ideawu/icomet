@@ -7,6 +7,10 @@ iComet is powerfull, can be used as the messaging server of many applications, s
 
 iComet provides a easy-to-use JavaScript library, with iComet js lib, you can build a web app that needs server-push feature very fast.
 
+## Documentation
+
+[https://github.com/ideawu/icomet/wiki](https://github.com/ideawu/icomet/wiki)
+
 
 ## iComet's role in web system and mobile system
 
