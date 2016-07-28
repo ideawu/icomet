@@ -73,9 +73,12 @@ void Subscriber::send_old_msgs(){
 
 	if(this->type == POLL){
 		this->poll_send_start();
+		int i = 0;
 		for(/**/; it != channel->msg_list.end(); it++){
 			const Message &msg = *it;
-			this->poll_send(msg.seq, msg.get_type_text(), msg.content.c_str());
+			int is_arr = (i != 0);
+			i ++;
+			this->poll_send(msg.seq, msg.get_type_text(), msg.content.c_str(), is_arr);
 		}
 		this->poll_send_end();
 	}else{
@@ -136,18 +139,19 @@ void Subscriber::poll_send(int seq, const char *type, const char *content, bool 
 	}
 
 	struct evbuffer *buf = evhttp_request_get_output_buffer(this->req);
+	if(array){
+		evbuffer_add(buf, ",", 1);
+	}
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type,
 		this->channel->name.c_str(),
 		seq,
 		content);
-	if(array){
-		evbuffer_add(buf, ",", 1);
-	}
 	
+	// 兼容老的客户端, 因为老的客户端遇到 broadcast 时没有将自己的 seq+1
 	if(strcmp(type, "broadcast") == 0){
-		this->poll_send(this->seq_next, "next_seq", "");
+		this->poll_send(this->seq_next, "next_seq", "", true);
 	}
 }
 
@@ -155,7 +159,7 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	if(this->type == POLL){
 		bool is_arr = strcmp(type, "broadcast") == 0;
 		this->poll_send_start(is_arr);
-		this->poll_send(seq, type, content, is_arr);
+		this->poll_send(seq, type, content, false);
 		this->poll_send_end(is_arr);
 		return;
 	}
