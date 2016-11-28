@@ -85,18 +85,20 @@ cd "$DIR"
 ######### generate build.h #########
 
 rm -f build.h
+rm -f src/version.h
 echo "#ifndef ICOMET_CONFIG_H" >> build.h
+echo "#define ICOMET_HTTP_HEADER_SERVER \"icomet `cat version`\"" >> build.h
 echo "#define ICOMET_VERSION \"`cat version`\"" >> build.h
 echo "#endif" >> build.h
 case "$TARGET_OS" in
 	CYGWIN*|FreeBSD)
 	;;
         OS_ANDROID_CROSSCOMPILE)
-                echo "#define OS_ANDROID 1" >> src/version.h
+                echo "#define OS_ANDROID 1" >> build.h
         ;;
 	*)
-		echo "#include <stdlib.h>" >> src/version.h
-		echo "#include <jemalloc/jemalloc.h>" >> src/version.h
+		echo "#include <stdlib.h>" >> build.h
+		echo "#include <jemalloc/jemalloc.h>" >> build.h
 	;;
 esac
 

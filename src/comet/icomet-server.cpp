@@ -109,7 +109,7 @@ void ping_handler(struct evhttp_request *req, void *arg){
 
 #define CHECK_AUTH() \
 	do{ \
-		evhttp_add_header(req->output_headers, "Server", "icomet"); \
+		evhttp_add_header(req->output_headers, "Server", ICOMET_HTTP_HEADER_SERVER); \
 		bool pass = ip_filter->check_pass(req->remote_host); \
 		if(!pass){ \
 			log_info("admin deny %s:%d", req->remote_host, req->remote_port); \
