@@ -58,6 +58,7 @@ public:
 	int poll(struct evhttp_request *req);
 	int iframe(struct evhttp_request *req);
 	int stream(struct evhttp_request *req);
+	int sse(struct evhttp_request *req);
 
 	int pub(struct evhttp_request *req, bool encoded);
 	int broadcast(struct evhttp_request *req);

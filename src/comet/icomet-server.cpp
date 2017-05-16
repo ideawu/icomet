@@ -103,6 +103,10 @@ void stream_handler(struct evhttp_request *req, void *arg){
 	serv->stream(req);
 }
 
+void sse_handler(struct evhttp_request *req, void *arg){
+	serv->sse(req);
+}
+
 void ping_handler(struct evhttp_request *req, void *arg){
 	serv->ping(req);
 }
@@ -285,6 +289,8 @@ int main(int argc, char **argv){
 		evhttp_set_cb(front_http, "/iframe", iframe_handler, NULL);
 		// http endless chunk
 		evhttp_set_cb(front_http, "/stream", stream_handler, NULL);
+		// http5 Server Send Event
+		evhttp_set_cb(front_http, "/sse", sse_handler, NULL);
 		// /ping?cb=jsonp
 		evhttp_set_cb(front_http, "/ping", ping_handler, NULL);
 
