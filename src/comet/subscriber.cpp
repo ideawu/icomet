@@ -108,6 +108,7 @@ void Subscriber::close(){
 
 void Subscriber::noop(){
 	this->send_chunk(this->seq_noop, "noop", "");
+	this->seq_noop ++;
 }
 
 void Subscriber::sync_next_seq(){
