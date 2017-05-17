@@ -32,8 +32,17 @@ void Subscriber::start(){
 	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
 	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 	//evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
-	//evhttp_add_header(req->output_headers, "Expires", "0");
-	evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	if(this->type == SSE){
+		// 用于告知客户端
+		// 此连接将返回SSE格式的返回内容，做好接收准备
+		evhttp_add_header(req->output_headers, "Content-Type", "text/event-stream; charset=utf-8");
+		evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+		// 允许客户端跨域请求
+		evhttp_add_header(req->output_headers, "Access-Control-Allow-Origin", "*");
+	}else{
+		evhttp_add_header(req->output_headers, "Expires", "0");
+		evhttp_add_header(req->output_headers, "Content-Type", "text/html; charset=utf-8");
+	}
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
 	if(this->type == POLL){
@@ -176,6 +185,11 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 	if(this->type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
 	}
+	if(this->type == SSE){
+		// 增加EventSource需要的数据标签
+		// 使得JS可以根据EventSource.data方式读取数据
+		evbuffer_add_printf(buf, "data: ");
+	}
 	evbuffer_add_printf(buf,
 		"{\"type\":\"%s\",\"cname\":\"%s\",\"seq\":%d,\"content\":\"%s\"}",
 		type, this->channel->name.c_str(), seq, content);
@@ -183,6 +197,10 @@ void Subscriber::send_chunk(int seq, const char *type, const char *content){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_suffix.c_str());
 	}
 	evbuffer_add_printf(buf, "\n");
+	// SSE协议需要两个\n表示一段push消息的结束
+	if(this->type == SSE){
+		evbuffer_add_printf(buf, "\n");
+	}
 	evhttp_send_reply_chunk(this->req, buf);
 
 	if(strcmp(type, "broadcast") == 0){

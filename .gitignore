@@ -8,6 +8,7 @@ icomet-server
 icomet-server-*
 online-server
 dev_icomet.conf
+patch
 *.dSYM
 *.pid
 *.o
@@ -21,6 +22,7 @@ tools/benchmark
 *.pyc
 *.swp
 *.exe
+*.patch
 icomet
 config.mk
 deps/libevent-2.0.21-stable/test

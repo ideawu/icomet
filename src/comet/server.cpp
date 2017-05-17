@@ -215,6 +215,10 @@ int Server::stream(struct evhttp_request *req){
 	return this->sub(req, Subscriber::STREAM);
 }
 
+int Server::sse(struct evhttp_request *req){
+	return this->sub(req, Subscriber::SSE);
+}
+
 int Server::sub_end(Subscriber *sub){
 	subscribers --;
 	Channel *channel = sub->channel;

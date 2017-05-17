@@ -19,7 +19,8 @@ public:
 	enum Type{
 		POLL	= 0,
 		STREAM	= 1,
-		IFRAME	= 2
+		IFRAME	= 2,
+		SSE		= 3
 	};
 public:
 	Subscriber();
