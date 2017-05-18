@@ -77,9 +77,6 @@ function iComet(config){
 			self.proc_message(msg);
 		}
 	}
-	// sign, long-polling 需要注册此函数
-	window[self.cb] = self.onmessage;
-	
 	
 	self.proc_message = function(msg){
 		self.log('resp', JSON.stringify(msg));
@@ -311,6 +308,7 @@ function iComet(config){
 		}catch(e){}
 	}
 
+	// sign, long-polling 需要注册此函数
+	window[self.cb] = self.onmessage;
 	self.start();
-
 }
