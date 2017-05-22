@@ -215,6 +215,10 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 		evbuffer_add_printf(buf, "%s(", cb);
 	}else if(sub_type == IFRAME){
 		evbuffer_add_printf(buf, "%s", iframe_chunk_prefix.c_str());
+	}else if(sub_type == SSE){
+		// 增加EventSource需要的数据标签
+		// 使得JS可以根据EventSource.data方式读取数据
+		evbuffer_add_printf(buf, "data: ");
 	}
 	
 	evbuffer_add_printf(buf,
@@ -228,6 +232,12 @@ void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, cons
 	}
 
 	evbuffer_add_printf(buf, "\n");
+	// 兼容SSE客户端协议
+	if(sub_type == SSE){
+		evbuffer_add_printf(buf, "\n");
+		evhttp_add_header(req->output_headers, "Content-Type", "text/event-stream; charset=utf-8");
+		evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+	}
 	evhttp_send_reply(req, HTTP_OK, "OK", buf);
 }
 
