@@ -191,6 +191,7 @@ function iComet(config){
 				}
 				self.EventSource.onerror = function(){
 					self.log('EventSource error');
+					self.EventSource.close();
 					self.EventSource = null;
 				}
 			}catch(e){
