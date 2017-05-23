@@ -23,7 +23,7 @@ function iComet(config){
 	
 	self.cname = config.channel;
 	self.sub_cb = function(msg){
-		self.log('proc', msg);
+		self.log('proc', JSON.stringify(msg));
 		var cb = config.callback || config.sub_callback;
 		if(cb){
 			try{
@@ -229,6 +229,10 @@ function iComet(config){
 	}
 	
 	self.start = function(){
+		// sign, long-polling 需要注册此函数
+		// 网络异常后, 函数注册会丢失, 需要重新注册.
+		window[self.cb] = self.onmessage;
+
 		self.log('start');
 		self.stopped = false;
 		self.last_msg_time = (new Date()).getTime();
@@ -308,7 +312,5 @@ function iComet(config){
 		}catch(e){}
 	}
 
-	// sign, long-polling 需要注册此函数
-	window[self.cb] = self.onmessage;
 	self.start();
 }
