@@ -32,6 +32,7 @@ void Subscriber::start(){
 		req->remote_host, req->remote_port,
 		channel->name.c_str(), this->seq_next, channel->subs.size);
 
+	// 需要监控 EV_READ 事件，否则无法得知客户端主动关闭连接。
 	bufferevent_enable(req->evcon->bufev, EV_READ);
 	// evhttp_send_reply_start 与 evhttp_send_reply_end 必须成对出现, 否则内存泄露。
 	// 有两个地方需要调用 evhttp_send_reply_end(), 一是服务端主动关闭，二是客户端主动关闭
