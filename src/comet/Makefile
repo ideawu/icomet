@@ -1,6 +1,6 @@
 include ../../build.mk
 
-OBJS = subscriber.o channel.o server.o
+OBJS = subscriber.o presence.o channel.o server.o
 CFLAGS += -I ../
 
 all: $(OBJS)
@@ -12,6 +12,8 @@ all: $(OBJS)
 
 subscriber.o: subscriber.h subscriber.cpp
 	${CXX} -c $(CFLAGS) subscriber.cpp
+presence.o: presence.h presence.cpp
+	${CXX} -c $(CFLAGS) presence.cpp
 channel.o: channel.h channel.cpp
 	${CXX} -c $(CFLAGS) channel.cpp
 server.o: server.h server.cpp

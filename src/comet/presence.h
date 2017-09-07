@@ -24,6 +24,9 @@ public:
 
 	Server *serv;
 	struct evhttp_request *req;
+	
+	void start();
+	void close();
 };
 
 #endif

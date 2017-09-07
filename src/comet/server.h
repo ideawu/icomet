@@ -34,8 +34,6 @@ private:
 	Channel* new_channel(const std::string &cname);
 	void free_channel(Channel *channel);
 
-	LinkedList<PresenceSubscriber *> psubs;
-
 	void add_presence(PresenceType type, const std::string &cname);
 	//void flush_presence();
 
@@ -47,6 +45,7 @@ public:
 	};
 
 	int auth;
+	LinkedList<PresenceSubscriber *> psubs;
 	
 	Server();
 	~Server();

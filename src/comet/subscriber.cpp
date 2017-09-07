@@ -16,6 +16,7 @@ static std::string iframe_chunk_suffix = ");</script>";
 
 Subscriber::Subscriber(){
 	req = NULL;
+	idle = 0;
 }
 
 Subscriber::~Subscriber(){
@@ -25,6 +26,18 @@ static void connection_closecb(struct evhttp_connection *evcon, void *arg){
 	Subscriber *sub = (Subscriber *)arg;
 	log_debug("subscriber disconnected");
 	sub->close();
+}
+
+static void add_http_header(int sub_type, struct evhttp_request *req){
+	evhttp_add_header(req->output_headers, "Expires", "0");
+	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
+	if(sub_type == Subscriber::SSE){
+		evhttp_add_header(req->output_headers, "Content-Type", "text/event-stream; charset=utf-8");
+		// 允许客户端跨域请求
+		evhttp_add_header(req->output_headers, "Access-Control-Allow-Origin", "*");
+	}else{
+		evhttp_add_header(req->output_headers, "Content-Type", "application/json; charset=utf-8");
+	}
 }
 
 void Subscriber::start(){
@@ -38,8 +51,9 @@ void Subscriber::start(){
 	// 有两个地方需要调用 evhttp_send_reply_end(), 一是服务端主动关闭，二是客户端主动关闭
 	// 客户端主动关闭会触发 connection_closecb
 	evhttp_connection_set_closecb(req->evcon, connection_closecb, this);
-	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 
+	add_http_header(this->type, req);
+	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 
 	if(this->type == Subscriber::IFRAME){
@@ -195,6 +209,7 @@ void Subscriber::send_msg(struct evhttp_request *req, const char *type, const st
 }
 
 void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content){
+	add_http_header(sub_type, req);
 	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	if(sub_type == Subscriber::IFRAME){
 		struct evbuffer *buf = evhttp_request_get_output_buffer(req);

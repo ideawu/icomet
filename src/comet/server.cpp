@@ -12,56 +12,7 @@ found in the LICENSE file.
 #include "server_config.h"
 #include "util/log.h"
 #include "util/list.h"
-
-class HttpQuery{
-private:
-	struct evkeyvalq _get;
-	struct evkeyvalq _post;
-	bool _has_post;
-public:
-	HttpQuery(struct evhttp_request *req){
-		_has_post = false;
-		if(evhttp_request_get_command(req) == EVHTTP_REQ_POST){
-			evbuffer *body_evb = evhttp_request_get_input_buffer(req);
-			size_t len = evbuffer_get_length(body_evb);
-			if(len > 0){
-				_has_post = true;
-				char *data = (char *)malloc(len + 1);
-				evbuffer_copyout(body_evb, data, len);
-				data[len] = '\0';
-				evhttp_parse_query_str(data, &_post);
-				free(data);
-			}
-		}
-		evhttp_parse_query(evhttp_request_get_uri(req), &_get);
-	}
-	~HttpQuery(){
-		evhttp_clear_headers(&_get);
-		if(_has_post){
-			evhttp_clear_headers(&_post);
-		}
-	}
-	int get_int(const char *name, int def){
-		if(_has_post){
-			const char *val = evhttp_find_header(&_post, name);
-			if(val){
-				return atoi(val);
-			}
-		}
-		const char *val = evhttp_find_header(&_get, name);
-		return val? atoi(val) : def;
-	}
-	const char* get_str(const char *name, const char *def){
-		if(_has_post){
-			const char *val = evhttp_find_header(&_post, name);
-			if(val){
-				return val;
-			}
-		}
-		const char *val = evhttp_find_header(&_get, name);
-		return val? val : def;
-	}
-};
+#include "http_query.h"
 
 Server::Server(){
 	this->auth = AUTH_NONE;
@@ -170,35 +121,17 @@ void Server::add_presence(PresenceType type, const std::string &cname){
 	}
 }
 
-static void on_psub_disconnect(struct evhttp_connection *evcon, void *arg){
-	log_info("presence subscriber disconnected");
-	PresenceSubscriber *psub = (PresenceSubscriber *)arg;
-	Server *serv = psub->serv;
-	serv->psub_end(psub);
-}
-
 int Server::psub(struct evhttp_request *req){
-	bufferevent_enable(req->evcon->bufev, EV_READ);
-
 	PresenceSubscriber *psub = new PresenceSubscriber();
 	psub->req = req;
 	psub->serv = this;
 	psubs.push_back(psub);
-	log_info("%s:%d psub, psubs: %d", req->remote_host, req->remote_port, psubs.size);
-
-	evhttp_send_reply_start(req, HTTP_OK, "OK");
-	evhttp_connection_set_closecb(req->evcon, on_psub_disconnect, psub);
+	psub->start();
 	return 0;
 }
 
 int Server::psub_end(PresenceSubscriber *psub){
-	struct evhttp_request *req = psub->req;
-	if(req->evcon){
-		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
-	}
-	evhttp_send_reply_end(req);
 	psubs.remove(psub);
-	log_info("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
 	delete psub;
 	return 0;
 }
@@ -233,16 +166,6 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 		return 0;
 	}
 
-	evhttp_add_header(req->output_headers, "Expires", "0");
-	evhttp_add_header(req->output_headers, "Cache-Control", "no-cache");
-	if(sub_type == Subscriber::SSE){
-		evhttp_add_header(req->output_headers, "Content-Type", "text/event-stream; charset=utf-8");
-		// 允许客户端跨域请求
-		evhttp_add_header(req->output_headers, "Access-Control-Allow-Origin", "*");
-	}else{
-		evhttp_add_header(req->output_headers, "Content-Type", "application/json; charset=utf-8");
-	}
-	
 	HttpQuery query(req);
 	int seq = query.get_int("seq", 0);
 	int noop = query.get_int("noop", 0);
@@ -279,7 +202,6 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	Subscriber *sub = new Subscriber();
 	sub->req = req;
 	sub->type = sub_type;
-	sub->idle = 0;
 	sub->seq_next = seq;
 	sub->seq_noop = noop;
 	sub->callback = cb;
