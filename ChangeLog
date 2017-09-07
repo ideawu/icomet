@@ -1,3 +1,6 @@
+* 0.2.5
+	* Bug fixes:
+		- Fix memory leak bug again, call evhttp_send_reply_end in connection_closecb(2017-09-07)
 * 0.2.3
 	* New features:
 		- Support HTML 5 EventSource(2017-05-17)

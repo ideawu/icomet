@@ -10,6 +10,7 @@ found in the LICENSE file.
 #include "server_config.h"
 #include <http-internal.h>
 
+static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><meta http-equiv='Cache-Control' content='no-store'><meta http-equiv='Cache-Control' content='no-cache'><meta http-equiv='Pragma' content='no-cache'><meta http-equiv=' Expires' content='Thu, 1 Jan 1970 00:00:00 GMT'><script type='text/javascript'>window.onError = null;try{document.domain = window.location.hostname.split('.').slice(-2).join('.');}catch(e){};</script></head><body>";
 static std::string iframe_chunk_prefix = "<script>parent.icomet_cb(";
 static std::string iframe_chunk_suffix = ");</script>";
 
@@ -20,17 +21,32 @@ Subscriber::Subscriber(){
 Subscriber::~Subscriber(){
 }
 
-static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
+static void connection_closecb(struct evhttp_connection *evcon, void *arg){
 	Subscriber *sub = (Subscriber *)arg;
 	log_debug("subscriber disconnected");
 	sub->close();
 }
 
 void Subscriber::start(){
+	log_debug("%s:%d sub %s, seq: %d, subs: %d",
+		req->remote_host, req->remote_port,
+		channel->name.c_str(), this->seq_next, channel->subs.size);
+
 	bufferevent_enable(req->evcon->bufev, EV_READ);
-	evhttp_connection_set_closecb(req->evcon, on_sub_disconnect, this);
+	// evhttp_send_reply_start 与 evhttp_send_reply_end 必须成对出现, 否则内存泄露。
+	// 有两个地方需要调用 evhttp_send_reply_end(), 一是服务端主动关闭，二是客户端主动关闭
+	// 客户端主动关闭会触发 connection_closecb
+	evhttp_connection_set_closecb(req->evcon, connection_closecb, this);
 	evhttp_add_header(req->output_headers, "Connection", "keep-alive");
-	
+
+	evhttp_send_reply_start(req, HTTP_OK, "OK");
+
+	if(this->type == Subscriber::IFRAME){
+		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
+		evbuffer_add_printf(buf, "%s\n", iframe_header.c_str());
+		evhttp_send_reply_chunk(req, buf);
+	}
+
 	if(this->seq_next == 0 || Channel::SEQ_GT(this->seq_next, channel->seq_next)){
 		this->seq_next = channel->seq_next;
 		if(this->seq_next != 0){
@@ -45,9 +61,14 @@ void Subscriber::start(){
 }
 
 void Subscriber::close(){
+	log_debug("%s:%d end %s, subs: %d,",
+		this->req->remote_host, this->req->remote_port,
+		channel->name.c_str(), channel->subs.size);
 	if(req->evcon){
+		// 记得清除 closecb
 		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
 	}
+	evhttp_send_reply_end(req);
 	channel->serv->sub_end(this);
 }
 
@@ -59,7 +80,8 @@ void Subscriber::send_old_msgs(){
 		}
 		const Message &msg = *it;
 		if(msg.seq >= this->seq_next){
-			log_debug("send old msg [%d ~ %d]", msg.seq, this->channel->seq_next-1);
+			log_debug("%s:%d send old msg [%d ~ %d]", req->remote_host, req->remote_port,
+				msg.seq, this->channel->seq_next-1);
 			break;
 		}
 		it ++;
@@ -94,7 +116,7 @@ void Subscriber::noop(){
 }
 
 void Subscriber::sync_next_seq(){
-	log_debug("%s:%d sync_next_seq: %d", req->remote_host, req->remote_port, seq_next);
+	log_debug("%s:%d send sync_next_seq: %d", req->remote_host, req->remote_port, seq_next);
 	this->send_chunk(seq_next, "next_seq", NULL);
 }
 
@@ -156,9 +178,6 @@ void Subscriber::send_end(int sub_type, struct evhttp_request *req, const char *
 	}
 	evbuffer_add_printf(buf, "\n");
 	evhttp_send_reply_chunk(req, buf);
-	if(sub_type == POLL){
-		evhttp_send_reply_end(req);
-	}
 }
 
 void Subscriber::send_msg(struct evhttp_request *req, const char *type, const std::string &cname, int seq,  const char *content, bool is_arr){
@@ -175,8 +194,16 @@ void Subscriber::send_msg(struct evhttp_request *req, const char *type, const st
 }
 
 void Subscriber::send_error_reply(int sub_type, struct evhttp_request *req, const char *cb, const std::string &cname, const char *type, const char *content){
+	evhttp_send_reply_start(req, HTTP_OK, "OK");
+	if(sub_type == Subscriber::IFRAME){
+		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
+		evbuffer_add_printf(buf, "%s\n", iframe_header.c_str());
+		evhttp_send_reply_chunk(req, buf);
+	}
+
 	Subscriber::send_start(sub_type, req, cb);
 	Subscriber::send_msg(req, type, cname, 0, content);
 	Subscriber::send_end(sub_type, req, cb);
+	evhttp_send_reply_end(req);
 }
 

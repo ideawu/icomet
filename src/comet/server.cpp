@@ -13,8 +13,6 @@ found in the LICENSE file.
 #include "util/log.h"
 #include "util/list.h"
 
-static std::string iframe_header = "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><meta http-equiv='Cache-Control' content='no-store'><meta http-equiv='Cache-Control' content='no-cache'><meta http-equiv='Pragma' content='no-cache'><meta http-equiv=' Expires' content='Thu, 1 Jan 1970 00:00:00 GMT'><script type='text/javascript'>window.onError = null;try{document.domain = window.location.hostname.split('.').slice(-2).join('.');}catch(e){};</script></head><body>";
-
 class HttpQuery{
 private:
 	struct evkeyvalq _get;
@@ -225,9 +223,6 @@ int Server::sub_end(Subscriber *sub){
 	subscribers --;
 	Channel *channel = sub->channel;
 	channel->del_subscriber(sub);
-	log_debug("%s:%d end %s, subs: %d,",
-		sub->req->remote_host, sub->req->remote_port,
-		channel->name.c_str(), channel->subs.size);
 	delete sub;
 	return 0;
 }
@@ -247,14 +242,7 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	}else{
 		evhttp_add_header(req->output_headers, "Content-Type", "application/json; charset=utf-8");
 	}
-	evhttp_send_reply_start(req, HTTP_OK, "OK");
 	
-	if(sub_type == Subscriber::IFRAME){
-		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
-		evbuffer_add_printf(buf, "%s\n", iframe_header.c_str());
-		evhttp_send_reply_chunk(req, buf);
-	}
-
 	HttpQuery query(req);
 	int seq = query.get_int("seq", 0);
 	int noop = query.get_int("noop", 0);
@@ -298,10 +286,6 @@ int Server::sub(struct evhttp_request *req, Subscriber::Type sub_type){
 	
 	channel->add_subscriber(sub);
 	subscribers ++;
-
-	log_debug("%s:%d sub %s, seq: %d, subs: %d",
-		req->remote_host, req->remote_port,
-		channel->name.c_str(), seq, channel->subs.size);
 
 	sub->start();
 	return 0;
