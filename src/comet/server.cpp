@@ -402,7 +402,7 @@ int Server::clear(struct evhttp_request *req){
 
 	Channel *channel = this->get_channel_by_name(cname);
 	if(!channel){
-		log_warn("channel %s not found", cname.c_str());
+		log_debug("channel %s not found", cname.c_str());
 		struct evbuffer *buf = evhttp_request_get_output_buffer(req);
 		evbuffer_add_printf(buf, "channel[%s] not connected\n", cname.c_str());
 		evhttp_send_reply(req, 404, "Not Found", buf);
